@@ -161,8 +161,8 @@ export const FlashcardDeck = ({
       setShowReviewPrompt(true);
     } else {
       setCurrentIndex(nextIndex);
+      setIsFlipped(false);
     }
-    setIsFlipped(false);
   };
 
   const handlePrevious = () => {
@@ -256,8 +256,14 @@ export const FlashcardDeck = ({
         checkForCompletion();
       }, 0);
       
-      handleNext();
-      setIsFlipped(false);
+      // Move to next card
+      const nextIndex = (currentIndex + 1) % currentCards.length;
+      if (nextIndex === 0 && hardCards.length > 0 && filterType === 'all' && !searchQuery.trim()) {
+        setShowReviewPrompt(true);
+      } else {
+        setCurrentIndex(nextIndex);
+        setIsFlipped(false);
+      }
     }
   };
 

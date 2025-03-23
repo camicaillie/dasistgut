@@ -6,7 +6,17 @@ export default {
   ],
   darkMode: 'class', // Enable dark mode with class strategy
   theme: {
-    extend: {},
+    extend: {
+      keyframes: {
+        'bounce-once': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-25px)' },
+        }
+      },
+      animation: {
+        'bounce-once': 'bounce-once 1s ease-in-out'
+      }
+    },
   },
   plugins: [],
 } 

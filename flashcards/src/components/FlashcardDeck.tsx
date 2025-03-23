@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Flashcard } from './Flashcard';
 import { Flashcard as FlashcardType } from '../data/flashcards';
 import { StudyStats } from './StudyStats';
+import { CompletionModal } from './CompletionModal';
 import { 
   SRSCard, 
   calculateNextReview, 
@@ -34,6 +35,7 @@ export const FlashcardDeck = ({
   );
   const [isReviewingHard, setIsReviewingHard] = useState(false);
   const [showReviewPrompt, setShowReviewPrompt] = useState(false);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
   const [showScoreboard, setShowScoreboard] = useState(false);
   const [reviewedCardIds, setReviewedCardIds] = useState<Set<number>>(new Set());
@@ -159,6 +161,19 @@ export const FlashcardDeck = ({
     setIsFlipped(false);
   };
 
+  const checkForCompletion = () => {
+    const allCards = cards.filter(card => card.difficulty);
+    const totalReviewed = allCards.length;
+    const totalCards = cards.length;
+    
+    if (totalReviewed === totalCards && totalCards > 0) {
+      const hasHardCards = allCards.some(card => card.difficulty === 'hard');
+      if (!hasHardCards) {
+        setShowCompletionModal(true);
+      }
+    }
+  };
+
   const handleDifficultySelect = (difficulty: 'easy' | 'medium' | 'hard') => {
     if (isReviewingHard) {
       // Review mode
@@ -225,6 +240,11 @@ export const FlashcardDeck = ({
             : card
         ));
       }
+      
+      // Check for completion after updating card difficulty
+      setTimeout(() => {
+        checkForCompletion();
+      }, 0);
       
       handleNext();
       setIsFlipped(false);
@@ -693,6 +713,14 @@ export const FlashcardDeck = ({
 
       {/* Stats modal */}
       {showStats && <StudyStats darkMode={darkMode} onClose={() => setShowStats(false)} />}
+
+      {showCompletionModal && (
+        <CompletionModal
+          darkMode={darkMode}
+          onClose={() => setShowCompletionModal(false)}
+          totalCards={cards.length}
+        />
+      )}
     </div>
   );
 }; 

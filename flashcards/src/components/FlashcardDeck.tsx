@@ -22,12 +22,14 @@ interface FlashcardDeckProps {
   cards: FlashcardType[];
   darkMode?: boolean;
   categoryId?: string;
+  subcategoryId?: string;
 }
 
 export const FlashcardDeck = ({ 
   cards: initialCards, 
   darkMode = false,
-  categoryId = 'default'
+  categoryId = 'default',
+  subcategoryId = 'default'
 }: FlashcardDeckProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cards, setCards] = useState<SRSCard[]>(() => 
@@ -146,8 +148,18 @@ export const FlashcardDeck = ({
     
     // In normal mode
     const nextIndex = (currentIndex + 1) % currentCards.length;
-    if (nextIndex === 0 && !isReviewingHard && hardCards.length > 0 && filterType === 'all' && !searchQuery) {
-      // Only show review prompt if we have hard cards, in normal mode, and no filters active
+    
+    // Only show review prompt if:
+    // 1. We're at the end of the deck
+    // 2. We're not already reviewing hard cards
+    // 3. We have hard cards to review
+    // 4. No filters are active
+    // 5. No search query is active
+    if (nextIndex === 0 && 
+        !isReviewingHard && 
+        hardCards.length > 0 && 
+        filterType === 'all' && 
+        !searchQuery.trim()) {
       setShowReviewPrompt(true);
     } else {
       setCurrentIndex(nextIndex);

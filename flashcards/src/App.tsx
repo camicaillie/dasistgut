@@ -8,6 +8,7 @@ import { flashcardSets, FlashcardSet } from './data/flashcards';
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [currentSet, setCurrentSet] = useState<FlashcardSet | null>(null);
   const [darkMode, setDarkMode] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -63,11 +64,21 @@ function App() {
     setSelectedCategory(categoryId);
     const selectedSet = flashcardSets.find(set => set.id === categoryId);
     setCurrentSet(selectedSet || null);
+    setSelectedSubcategory(null);
+  };
+
+  const handleSubcategorySelect = (subcategoryId: string) => {
+    setSelectedSubcategory(subcategoryId);
   };
 
   const handleBackToCategories = () => {
     setSelectedCategory(null);
+    setSelectedSubcategory(null);
     setCurrentSet(null);
+  };
+
+  const handleBackToSubcategories = () => {
+    setSelectedSubcategory(null);
   };
 
   const toggleDarkMode = () => {
@@ -214,11 +225,20 @@ function App() {
       {renderHeader()}
       <main className="max-w-7xl mx-auto py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
         {selectedCategory && currentSet ? (
-          <FlashcardDeck 
-            cards={currentSet.cards} 
-            darkMode={darkMode}
-            categoryId={selectedCategory}
-          />
+          selectedSubcategory ? (
+            <FlashcardDeck 
+              cards={currentSet.subcategories.find(sub => sub.id === selectedSubcategory)?.cards || []} 
+              darkMode={darkMode}
+              categoryId={selectedCategory}
+              subcategoryId={selectedSubcategory}
+            />
+          ) : (
+            <WelcomePage 
+              onCategorySelect={handleSubcategorySelect} 
+              darkMode={darkMode}
+              selectedCategory={currentSet}
+            />
+          )
         ) : (
           <WelcomePage onCategorySelect={handleCategorySelect} darkMode={darkMode} />
         )}

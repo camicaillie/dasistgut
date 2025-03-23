@@ -77,10 +77,6 @@ function App() {
     setCurrentSet(null);
   };
 
-  const handleBackToSubcategories = () => {
-    setSelectedSubcategory(null);
-  };
-
   const toggleDarkMode = () => {
     setDarkMode(prev => !prev);
   };
@@ -230,7 +226,6 @@ function App() {
               cards={currentSet.subcategories.find(sub => sub.id === selectedSubcategory)?.cards || []} 
               darkMode={darkMode}
               categoryId={selectedCategory}
-              subcategoryId={selectedSubcategory}
             />
           ) : (
             <WelcomePage 

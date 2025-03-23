@@ -22,14 +22,12 @@ interface FlashcardDeckProps {
   cards: FlashcardType[];
   darkMode?: boolean;
   categoryId?: string;
-  subcategoryId?: string;
 }
 
 export const FlashcardDeck = ({ 
   cards: initialCards, 
   darkMode = false,
-  categoryId = 'default',
-  subcategoryId = 'default'
+  categoryId = 'default'
 }: FlashcardDeckProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cards, setCards] = useState<SRSCard[]>(() => 

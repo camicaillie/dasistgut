@@ -23,10 +23,10 @@ export const PasswordPrompt: React.FC<PasswordPromptProps> = ({ onCorrectPasswor
     <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 sm:px-6 lg:px-8">
       <div className={`p-6 sm:p-8 rounded-xl shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} w-full max-w-sm mx-auto`}>
         <h2 className={`text-xl sm:text-2xl font-bold mb-6 text-center ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-          Welcome to Flashcards
+          Vítejte ve Flashcards
         </h2>
         <p className={`text-sm sm:text-base text-center mb-8 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-          Please enter the password to continue
+          Pro pokračování zadejte heslo
         </p>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -45,7 +45,7 @@ export const PasswordPrompt: React.FC<PasswordPromptProps> = ({ onCorrectPasswor
                       ? 'border-gray-600 bg-gray-700 text-white' 
                       : 'border-gray-300 bg-white text-gray-900'
                 } focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200`}
-                placeholder="Enter password"
+                placeholder="Zadejte heslo"
                 autoComplete="current-password"
               />
               {error && (
@@ -57,7 +57,7 @@ export const PasswordPrompt: React.FC<PasswordPromptProps> = ({ onCorrectPasswor
               )}
             </div>
             {error && (
-              <p className="text-red-500 text-sm mt-2 text-center">Incorrect password. Please try again.</p>
+              <p className="text-red-500 text-sm mt-2 text-center">Nesprávné heslo. Zkuste to prosím znovu.</p>
             )}
           </div>
           <button
@@ -68,7 +68,7 @@ export const PasswordPrompt: React.FC<PasswordPromptProps> = ({ onCorrectPasswor
                 : 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700'
             } text-white transition-colors duration-200 transform hover:scale-[1.02] active:scale-[0.98]`}
           >
-            Enter App
+            Vstoupit do aplikace
           </button>
         </form>
       </div>

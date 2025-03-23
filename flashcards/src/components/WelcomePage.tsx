@@ -28,20 +28,36 @@ export const WelcomePage = ({ onCategorySelect, darkMode = false, selectedCatego
             <button
               key={subcategory.id}
               onClick={() => onCategorySelect(subcategory.id)}
-              className={`${darkMode ? 'bg-gray-800' : 'bg-white'} text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1`}
+              className={`
+                group relative overflow-hidden
+                rounded-xl p-6 shadow-lg 
+                transition-all duration-300 ease-out
+                transform hover:scale-[1.02]
+                ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'}
+              `}
             >
-              <h3 className={`text-2xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                {subcategory.name}
-              </h3>
-              <div className={`space-y-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                <p>Karet: {subcategory.stats.cardsStudied}/{subcategory.stats.totalCards}</p>
-                <p>Úspěšnost: {Math.round(subcategory.stats.averageSuccessRate)}%</p>
-                <p>Úroveň: {subcategory.stats.masteryLevel}</p>
-                {subcategory.stats.lastStudyDate && (
-                  <p>Poslední studium: {new Date(subcategory.stats.lastStudyDate).toLocaleDateString()}</p>
-                )}
-                <p>Celkový čas: {Math.round(subcategory.stats.totalStudyTime)} min</p>
+              <div className="relative z-10 flex flex-col h-full">
+                <h3 className={`text-2xl font-bold mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {subcategory.name}
+                </h3>
+                
+                <div className={`flex items-center gap-2 mt-auto ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" 
+                    />
+                  </svg>
+                  <span className="text-lg font-medium">{subcategory.cards.length} kartiček</span>
+                </div>
               </div>
+
+              {/* Subtle decorative element */}
+              <div className={`
+                absolute bottom-0 left-0 right-0 h-1 
+                transform origin-left transition-transform duration-300
+                ${darkMode ? 'bg-blue-500' : 'bg-blue-600'}
+                scale-x-0 group-hover:scale-x-100
+              `}></div>
             </button>
           ))}
         </div>

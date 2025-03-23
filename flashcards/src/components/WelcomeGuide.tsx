@@ -11,8 +11,8 @@ export const WelcomeGuide: React.FC<WelcomeGuideProps> = ({ darkMode, onClose })
 
   const steps = [
     {
-      title: "Welcome to Flashcards!",
-      content: "This app helps you learn and memorize information using flashcards. Let's take a quick tour of how it works.",
+      title: "Vítejte ve Flashcards!",
+      content: "Tato aplikace vám pomůže učit se a zapamatovat si informace pomocí kartiček. Pojďme se podívat, jak to funguje.",
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -20,8 +20,8 @@ export const WelcomeGuide: React.FC<WelcomeGuideProps> = ({ darkMode, onClose })
       )
     },
     {
-      title: "Choose Your Category",
-      content: "Start by selecting a category of flashcards you want to study. Each category contains a set of cards focused on a specific topic.",
+      title: "Vyberte si kategorii",
+      content: "Začněte výběrem kategorie kartiček, kterou chcete studovat. Každá kategorie obsahuje sadu kartiček zaměřených na konkrétní téma.",
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -29,8 +29,8 @@ export const WelcomeGuide: React.FC<WelcomeGuideProps> = ({ darkMode, onClose })
       )
     },
     {
-      title: "Study and Learn",
-      content: "Click on cards to flip them and reveal the answer. Use the navigation buttons to move between cards. The dark mode toggle helps you study comfortably in any lighting.",
+      title: "Studujte a učte se",
+      content: "Klikněte na kartičky pro jejich převrácení a zobrazení odpovědi. Použijte navigační tlačítka pro pohyb mezi kartičkami. Přepínání tmavého režimu vám pomůže pohodlně studovat za jakéhokoliv osvětlení.",
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -120,7 +120,7 @@ export const WelcomeGuide: React.FC<WelcomeGuideProps> = ({ darkMode, onClose })
                       ? 'w-8 bg-blue-500' 
                       : 'w-2 ' + (darkMode ? 'bg-gray-600' : 'bg-gray-300')}
                   `}
-                  aria-label={`Go to step ${index + 1}`}
+                  aria-label={`Přejít na krok ${index + 1}`}
                 />
               ))}
             </div>
@@ -137,10 +137,10 @@ export const WelcomeGuide: React.FC<WelcomeGuideProps> = ({ darkMode, onClose })
                     : 'text-gray-600 hover:text-gray-900'}
                 `}
               >
-                ← Back
+                ← Zpět
               </button>
               <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                Step {currentStep} of {totalSteps}
+                Krok {currentStep} z {totalSteps}
               </span>
               <button
                 onClick={handleNext}
@@ -153,7 +153,7 @@ export const WelcomeGuide: React.FC<WelcomeGuideProps> = ({ darkMode, onClose })
                     : 'bg-blue-500 hover:bg-blue-600 text-white'}
                 `}
               >
-                {currentStep === totalSteps ? 'Get Started →' : 'Next →'}
+                {currentStep === totalSteps ? 'Začít →' : 'Další →'}
               </button>
             </div>
           </div>

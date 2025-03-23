@@ -20,42 +20,55 @@ export const PasswordPrompt: React.FC<PasswordPromptProps> = ({ onCorrectPasswor
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh]">
-      <div className={`p-8 rounded-lg shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} max-w-md w-full`}>
-        <h2 className={`text-2xl font-bold mb-6 text-center ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-          Enter Password
+    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 sm:px-6 lg:px-8">
+      <div className={`p-6 sm:p-8 rounded-xl shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} w-full max-w-sm mx-auto`}>
+        <h2 className={`text-xl sm:text-2xl font-bold mb-6 text-center ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          Welcome to Flashcards
         </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <p className={`text-sm sm:text-base text-center mb-8 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          Please enter the password to continue
+        </p>
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setError(false);
-              }}
-              className={`w-full px-4 py-2 rounded-lg border ${
-                error 
-                  ? 'border-red-500' 
-                  : darkMode 
-                    ? 'border-gray-600 bg-gray-700 text-white' 
-                    : 'border-gray-300 bg-white text-gray-900'
-              } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-              placeholder="Enter password"
-            />
+            <div className="relative">
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError(false);
+                }}
+                className={`w-full px-4 py-3 rounded-lg border text-base sm:text-lg ${
+                  error 
+                    ? 'border-red-500' 
+                    : darkMode 
+                      ? 'border-gray-600 bg-gray-700 text-white' 
+                      : 'border-gray-300 bg-white text-gray-900'
+                } focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200`}
+                placeholder="Enter password"
+                autoComplete="current-password"
+              />
+              {error && (
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                  <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              )}
+            </div>
             {error && (
-              <p className="text-red-500 text-sm mt-2">Incorrect password. Please try again.</p>
+              <p className="text-red-500 text-sm mt-2 text-center">Incorrect password. Please try again.</p>
             )}
           </div>
           <button
             type="submit"
-            className={`w-full py-2 px-4 rounded-lg ${
+            className={`w-full py-3 px-4 rounded-lg text-base sm:text-lg font-medium ${
               darkMode 
-                ? 'bg-blue-600 hover:bg-blue-700' 
-                : 'bg-blue-500 hover:bg-blue-600'
-            } text-white font-medium transition-colors duration-200`}
+                ? 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800' 
+                : 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700'
+            } text-white transition-colors duration-200 transform hover:scale-[1.02] active:scale-[0.98]`}
           >
-            Submit
+            Enter App
           </button>
         </form>
       </div>

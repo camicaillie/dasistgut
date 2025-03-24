@@ -83,11 +83,33 @@ export const FlashcardDeck = ({
     // Apply search filter if there's a query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        card => 
-          card.front.toLowerCase().includes(query) || 
-          card.back.toLowerCase().includes(query)
-      );
+      filtered = filtered.filter(card => {
+        // Search in front and back text
+        const frontMatch = card.front.toLowerCase().includes(query);
+        const backMatch = card.back.toLowerCase().includes(query);
+        
+        // Search in difficulty
+        const difficultyMatch = card.difficulty?.toLowerCase().includes(query);
+        
+        // Search in due date (if using SRS)
+        const dueDateMatch = useSRS && card.dueDate && 
+          card.dueDate.toLocaleDateString().toLowerCase().includes(query);
+        
+        // Search in interval (if using SRS)
+        const intervalMatch = useSRS && card.interval && 
+          card.interval.toString().includes(query);
+        
+        // Search in success rate (if available)
+        const successRateMatch = card.successRate && 
+          card.successRate.toString().includes(query);
+        
+        // Search in times reviewed (if available)
+        const timesReviewedMatch = card.timesReviewed && 
+          card.timesReviewed.toString().includes(query);
+        
+        return frontMatch || backMatch || difficultyMatch || dueDateMatch || 
+               intervalMatch || successRateMatch || timesReviewedMatch;
+      });
     }
     
     // Sort by due date if using SRS
@@ -145,7 +167,7 @@ export const FlashcardDeck = ({
     }
     
     // In normal mode
-    const nextIndex = (currentIndex + 1) % currentCards.length;
+    const nextIndex = currentIndex + 1;
     
     // Only show review prompt if:
     // 1. We're at the end of the deck
@@ -153,13 +175,18 @@ export const FlashcardDeck = ({
     // 3. We have hard cards to review
     // 4. No filters are active
     // 5. No search query is active
-    if (nextIndex === 0 && 
+    if (nextIndex >= currentCards.length && 
         !isReviewingHard && 
         hardCards.length > 0 && 
         filterType === 'all' && 
         !searchQuery.trim()) {
       setShowReviewPrompt(true);
     } else {
+      // If we're at the end and don't meet conditions for review prompt,
+      // stay on the last card
+      if (nextIndex >= currentCards.length) {
+        return;
+      }
       setCurrentIndex(nextIndex);
       setIsFlipped(false);
     }
@@ -586,16 +613,36 @@ export const FlashcardDeck = ({
         <div className="w-full max-w-2xl">
           <div className="flex flex-col md:flex-row gap-4 mb-4">
             <div className="flex-grow">
-              <input
-                type="text"
-                placeholder="Search cards..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentIndex(0); // Reset to first card when searching
-                }}
-                className={`w-full px-4 py-2 border ${darkMode ? 'bg-gray-800 text-white border-gray-700 focus:ring-blue-600' : 'bg-white text-gray-900 border-gray-300 focus:ring-blue-500'} rounded-lg focus:outline-none focus:ring-2`}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search cards by content, difficulty, due date, etc..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentIndex(0); // Reset to first card when searching
+                  }}
+                  className={`w-full px-4 py-2 border ${darkMode ? 'bg-gray-800 text-white border-gray-700 focus:ring-blue-600' : 'bg-white text-gray-900 border-gray-300 focus:ring-blue-500'} rounded-lg focus:outline-none focus:ring-2`}
+                />
+                {searchQuery.trim() && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setCurrentIndex(0);
+                    }}
+                    className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-opacity-20 ${
+                      darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-200'
+                    }`}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              <p className={`mt-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Search by: card content, difficulty (easy/medium/hard), due date, interval, success rate, or times reviewed
+              </p>
             </div>
             <div className="flex">
               <select

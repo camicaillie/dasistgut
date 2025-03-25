@@ -10,8 +10,7 @@ import {
   calculateNextReview, 
   loadSRSData, 
   saveSRSData,
-  getDueCards,
-  sortCardsByDueDate
+  getDueCards
 } from '../utils/spacedRepetition';
 
 interface FlashcardDeckProps {

@@ -111,16 +111,16 @@ export const sortCardsByDueDate = (cards: SRSCard[]): SRSCard[] => {
 /**
  * Save SRS data to localStorage
  */
-export const saveSRSData = (categoryId: string, cards: SRSCard[]): void => {
-  const key = `flashcards-srs-${categoryId}`;
+export const saveSRSData = (categoryId: string, subcategoryId: string, cards: SRSCard[]): void => {
+  const key = `flashcards-srs-${categoryId}-${subcategoryId}`;
   localStorage.setItem(key, JSON.stringify(cards));
 };
 
 /**
  * Load SRS data from localStorage
  */
-export const loadSRSData = (categoryId: string, defaultCards: Flashcard[]): SRSCard[] => {
-  const key = `flashcards-srs-${categoryId}`;
+export const loadSRSData = (categoryId: string, subcategoryId: string, defaultCards: Flashcard[]): SRSCard[] => {
+  const key = `flashcards-srs-${categoryId}-${subcategoryId}`;
   const savedData = localStorage.getItem(key);
   
   if (savedData) {

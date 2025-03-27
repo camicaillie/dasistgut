@@ -27,7 +27,7 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [showIntroduction, setShowIntroduction] = useState(true);
   const [cards, setCards] = useState<SRSCard[]>(() => 
-    loadSRSData(categoryId, initialCards.map((card, index) => ({
+    loadSRSData(categoryId, subcategoryId, initialCards.map((card, index) => ({
       ...card,
       id: index,
       difficulty: undefined,
@@ -87,9 +87,9 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
   // Save cards data whenever it changes
   useEffect(() => {
     if (useSRS) {
-      saveSRSData(categoryId, cards);
+      saveSRSData(categoryId, subcategoryId, cards);
     }
-  }, [cards, categoryId, useSRS]);
+  }, [cards, categoryId, subcategoryId, useSRS]);
 
   // Handle keyboard controls
   useEffect(() => {

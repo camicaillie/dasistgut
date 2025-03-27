@@ -93,7 +93,7 @@ function App() {
             >
               <h1 className={`text-2xl sm:text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'} truncate flex items-center gap-2`}>
                 Flashcards App
-                <span className={`text-sm font-normal ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>v1.15</span>
+                <span className={`text-sm font-normal ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>v1.16</span>
               </h1>
             </GuideTooltip>
             <div className="flex items-center gap-2 sm:hidden">

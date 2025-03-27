@@ -11,7 +11,7 @@ function App() {
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [currentSet, setCurrentSet] = useState<FlashcardSet | null>(null);
   const [darkMode, setDarkMode] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showWelcomeGuide, setShowWelcomeGuide] = useState(false);
   const [hasSeenGuide, setHasSeenGuide] = useState(false);
 

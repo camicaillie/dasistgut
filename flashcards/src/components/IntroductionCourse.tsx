@@ -57,32 +57,45 @@ export const IntroductionCourse = ({ darkMode = false, onComplete, slides }: Int
   const progress = ((currentSlide + 1) / slides.length) * 100;
 
   return (
-    <div className={`fixed inset-0 ${darkMode ? 'bg-black/70' : 'bg-black/50'} z-50 flex items-center justify-center p-4`}>
-      <div className={`w-full max-w-2xl ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'} rounded-xl shadow-xl overflow-hidden`}>
-        <div className="relative h-[60vh] flex flex-col">
+    <div className={`fixed inset-0 ${darkMode ? 'bg-black/70' : 'bg-black/50'} z-50 flex items-center justify-center p-4 backdrop-blur-sm`}>
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ duration: 0.2 }}
+        className={`w-full max-w-2xl ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'} rounded-xl shadow-xl overflow-hidden backdrop-blur-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}
+      >
+        <div className="relative flex flex-col h-[80vh]">
           {/* Skip button */}
-          <button
-            onClick={onComplete}
-            className={`absolute top-4 right-16 z-20 px-4 py-1.5 rounded-lg text-sm font-medium 
-              transition-colors duration-200 flex items-center gap-2
-              ${darkMode 
-                ? 'text-gray-300 hover:text-white hover:bg-gray-700' 
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              }`}
-          >
-            Skip Course
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="absolute top-4 right-16 z-20">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onComplete}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium 
+                transition-colors duration-200 flex items-center gap-2
+                ${darkMode 
+                  ? 'text-gray-300 hover:text-white hover:bg-gray-700/50 backdrop-blur-sm' 
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/50 backdrop-blur-sm'
+                }`}
+            >
+              Skip Course
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </motion.button>
+          </div>
 
           {/* Progress bar */}
-          <div className="absolute top-0 left-0 w-full h-1 bg-gray-200">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gray-200/30 backdrop-blur-sm">
             <motion.div
-              className="h-full bg-blue-500"
+              className={`h-full ${darkMode ? 'bg-blue-500' : 'bg-blue-500'}`}
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              style={{
+                boxShadow: `0 0 10px ${darkMode ? '#3B82F6' : '#3B82F6'}`
+              }}
             />
           </div>
 
@@ -91,30 +104,44 @@ export const IntroductionCourse = ({ darkMode = false, onComplete, slides }: Int
             {currentSlide + 1} / {slides.length}
           </div>
 
-          <AnimatePresence mode="wait">
+          {/* Content area - Made scrollable */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
             <motion.div
               key={currentSlide}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="flex-1 p-6 pt-12 overflow-y-auto"
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="p-6 pt-16"
             >
-              <h2 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              <motion.h2 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}
+              >
                 {slides[currentSlide].title}
-              </h2>
-              <div className={`prose ${darkMode ? 'prose-invert' : ''} max-w-none whitespace-pre-wrap`}>
+              </motion.h2>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className={`prose ${darkMode ? 'prose-invert' : ''} max-w-none whitespace-pre-wrap`}
+              >
                 {slides[currentSlide].content}
-              </div>
+              </motion.div>
             </motion.div>
-          </AnimatePresence>
+          </div>
 
-          <div className="border-t border-gray-200 p-4 flex justify-between items-center">
+          {/* Navigation controls - Fixed at bottom */}
+          <div className={`border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} p-4 bg-inherit backdrop-blur-sm`}>
             {/* Slide indicators */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 mb-4 overflow-x-auto pb-2 justify-center">
               {slides.map((_, index) => (
-                <button
+                <motion.button
                   key={index}
+                  whileHover={{ scale: 1.2 }}
+                  whileTap={{ scale: 0.9 }}
                   onClick={() => {
                     if (!isAnimating) {
                       setIsAnimating(true);
@@ -124,9 +151,9 @@ export const IntroductionCourse = ({ darkMode = false, onComplete, slides }: Int
                       }, 300);
                     }
                   }}
-                  className={`h-2 rounded-full transition-all duration-200 ${
+                  className={`h-2 rounded-full transition-all duration-300 flex-shrink-0 ${
                     index === currentSlide
-                      ? `w-8 ${darkMode ? 'bg-blue-500' : 'bg-blue-500'}`
+                      ? `w-8 ${darkMode ? 'bg-blue-500 shadow-glow-blue' : 'bg-blue-500 shadow-glow-blue'}`
                       : `w-2 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'} hover:bg-blue-300`
                   }`}
                   disabled={isAnimating}
@@ -136,40 +163,68 @@ export const IntroductionCourse = ({ darkMode = false, onComplete, slides }: Int
             </div>
 
             {/* Navigation buttons */}
-            <div className="flex gap-4">
-              <button
+            <div className="flex justify-between items-center">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handlePrevious}
                 disabled={currentSlide === 0 || isAnimating}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2
                   ${currentSlide === 0
                     ? 'opacity-50 cursor-not-allowed'
                     : darkMode
-                      ? 'text-gray-300 hover:text-white hover:bg-gray-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+                      ? 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/50'}`}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
                 Previous
-              </button>
-              <button
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleNext}
                 disabled={isAnimating}
                 className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200
-                  transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2
+                  flex items-center gap-2 shadow-lg
                   ${darkMode
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                    : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-glow-blue'
+                    : 'bg-blue-500 hover:bg-blue-600 text-white shadow-glow-blue'}`}
               >
                 {currentSlide === slides.length - 1 ? 'Start Learning' : 'Next'}
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              </button>
+              </motion.button>
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
+
+      <style>{`
+        .shadow-glow-blue {
+          box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 8px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: ${darkMode ? 'rgba(31, 41, 55, 0.5)' : 'rgba(243, 244, 246, 0.5)'};
+          border-radius: 4px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: ${darkMode ? 'rgba(75, 85, 99, 0.5)' : 'rgba(209, 213, 219, 0.5)'};
+          border-radius: 4px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: ${darkMode ? 'rgba(75, 85, 99, 0.8)' : 'rgba(209, 213, 219, 0.8)'};
+        }
+      `}</style>
     </div>
   );
 }; 

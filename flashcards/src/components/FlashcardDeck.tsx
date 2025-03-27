@@ -17,9 +17,10 @@ interface FlashcardDeckProps {
   cards: FlashcardType[];
   darkMode?: boolean;
   categoryId?: string;
+  subcategoryId?: string;
 }
 
-export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryId = 'default' }: FlashcardDeckProps) => {
+export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryId = 'default', subcategoryId = '' }: FlashcardDeckProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [showStats, setShowStats] = useState(false);
@@ -512,12 +513,12 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
   }
 
   return (
-    <div className="flex flex-col items-center gap-6 p-4 sm:p-6">
-      {showIntroduction && categoryId && introductionCourses[categoryId] ? (
+    <div className="space-y-6">
+      {showIntroduction && categoryId && subcategoryId && introductionCourses[categoryId]?.[subcategoryId] ? (
         <IntroductionCourse
-          darkMode={darkMode}
-          slides={introductionCourses[categoryId]}
+          slides={introductionCourses[categoryId][subcategoryId]}
           onComplete={() => setShowIntroduction(false)}
+          darkMode={darkMode}
         />
       ) : (
         <>

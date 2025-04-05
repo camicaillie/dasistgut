@@ -1,4 +1,6 @@
 import { Flashcard } from '../data/flashcards';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { auth, db } from './firebase'; // Adjust the path to your firebase.ts file
 
 /**
  * Spaced Repetition System (SRS) implementation
@@ -109,38 +111,67 @@ export const sortCardsByDueDate = (cards: SRSCard[]): SRSCard[] => {
 };
 
 /**
- * Save SRS data to localStorage
+ * Save SRS data to Firestore
  */
-export const saveSRSData = (categoryId: string, subcategoryId: string, cards: SRSCard[]): void => {
-  const key = `flashcards-srs-${categoryId}-${subcategoryId}`;
-  localStorage.setItem(key, JSON.stringify(cards));
+export const saveSRSData = async (categoryId: string, subcategoryId: string, cards: SRSCard[]): Promise<void> => {
+  if (!auth.currentUser) {
+    console.log('User not logged in, cannot save SRS data');
+    return;
+  }
+
+  const userId = auth.currentUser.uid;
+  const docId = `${categoryId}_${subcategoryId}`; // e.g., "general_mathematics"
+  const docRef = doc(db, 'users', userId, 'srsData', docId);
+
+  // Convert dates to ISO strings for Firestore
+  const serializedCards = cards.map(card => ({
+    ...card,
+    dueDate: card.dueDate ? card.dueDate.toISOString() : undefined,
+    lastReviewed: card.lastReviewed ? card.lastReviewed.toISOString() : undefined,
+  }));
+
+  try {
+    await setDoc(docRef, { cards: serializedCards }, { merge: true });
+  } catch (error) {
+    console.error('Error saving SRS data to Firestore:', error);
+    throw error; // Optionally rethrow to handle errors in the calling code
+  }
 };
 
 /**
- * Load SRS data from localStorage
+ * Load SRS data from Firestore
  */
-export const loadSRSData = (categoryId: string, subcategoryId: string, defaultCards: Flashcard[]): SRSCard[] => {
-  const key = `flashcards-srs-${categoryId}-${subcategoryId}`;
-  const savedData = localStorage.getItem(key);
-  
-  if (savedData) {
-    try {
-      const parsedData = JSON.parse(savedData) as SRSCard[];
-      
-      // Convert string dates back to Date objects
-      return parsedData.map(card => ({
+export const loadSRSData = async (categoryId: string, subcategoryId: string, defaultCards: Flashcard[]): Promise<SRSCard[]> => {
+  if (!auth.currentUser) {
+    console.log('User not logged in, returning default cards');
+    return defaultCards.map((card, index) => ({
+      ...card,
+      id: index + 1,
+    }));
+  }
+
+  const userId = auth.currentUser.uid;
+  const docId = `${categoryId}_${subcategoryId}`;
+  const docRef = doc(db, 'users', userId, 'srsData', docId);
+
+  try {
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const savedCards = data.cards as SRSCard[];
+      return savedCards.map(card => ({
         ...card,
         dueDate: card.dueDate ? new Date(card.dueDate) : undefined,
         lastReviewed: card.lastReviewed ? new Date(card.lastReviewed) : undefined,
       }));
-    } catch (error) {
-      console.error('Error parsing SRS data:', error);
     }
+  } catch (error) {
+    console.error('Error loading SRS data from Firestore:', error);
   }
-  
-  // If no saved data, return default cards with SRS fields added
+
+  // If no data exists in Firestore or an error occurs, return default cards
   return defaultCards.map((card, index) => ({
     ...card,
     id: index + 1,
   }));
-}; 
+};

@@ -26,17 +26,8 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
   const [showStats, setShowStats] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [showIntroduction, setShowIntroduction] = useState(true);
-  const [cards, setCards] = useState<SRSCard[]>(() => 
-    loadSRSData(categoryId, subcategoryId, initialCards.map((card, index) => ({
-      ...card,
-      id: index,
-      difficulty: undefined,
-      dueDate: undefined,
-      interval: undefined,
-      easeFactor: 2.5,
-      repetitions: 0
-    })))
-  );
+  const [cards, setCards] = useState<SRSCard[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [useSRS, setUseSRS] = useState(true);
   const [isReviewingHard, setIsReviewingHard] = useState(false);
   const [reviewedCardIds, setReviewedCardIds] = useState<Set<number>>(new Set());
@@ -47,12 +38,63 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
   const [showScoreboard, setShowScoreboard] = useState(false);
   const [categoryName, setCategoryName] = useState('');
 
+  // Load SRS data on component mount and when category/subcategory changes
+  useEffect(() => {
+    const fetchCards = async () => {
+      setIsLoading(true);
+      try {
+        const defaultCards = initialCards.map((card, index) => ({
+          ...card,
+          id: index,
+          difficulty: undefined,
+          dueDate: undefined,
+          interval: undefined,
+          easeFactor: 2.5,
+          repetitions: 0
+        }));
+        const loadedCards = await loadSRSData(categoryId, subcategoryId, defaultCards);
+        setCards(loadedCards);
+      } catch (error) {
+        console.error('Error loading SRS data:', error);
+        // Fallback to default cards if loading fails
+        setCards(initialCards.map((card, index) => ({
+          ...card,
+          id: index,
+          difficulty: undefined,
+          dueDate: undefined,
+          interval: undefined,
+          easeFactor: 2.5,
+          repetitions: 0
+        })));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCards();
+  }, [categoryId, subcategoryId, initialCards]);
+
   // Get category name from URL
   useEffect(() => {
     const path = window.location.pathname;
     const category = path.split('/').pop() || '';
     setCategoryName(category);
   }, []);
+
+  // Save cards data whenever it changes
+  useEffect(() => {
+    const saveCards = async () => {
+      if (useSRS && cards.length > 0) {
+        try {
+          await saveSRSData(categoryId, subcategoryId, cards);
+        } catch (error) {
+          console.error('Error saving SRS data:', error);
+        }
+      }
+    };
+
+    saveCards();
+  }, [cards, categoryId, subcategoryId, useSRS]);
 
   // Filter cards based on search query and filter type
   const filteredCards = cards.filter(card => {
@@ -83,13 +125,6 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
     hard: cards.filter(card => card.difficulty === 'hard').length,
     favorites: cards.filter(card => card.favorite).length,
   };
-
-  // Save cards data whenever it changes
-  useEffect(() => {
-    if (useSRS) {
-      saveSRSData(categoryId, subcategoryId, cards);
-    }
-  }, [cards, categoryId, subcategoryId, useSRS]);
 
   // Handle keyboard controls
   useEffect(() => {

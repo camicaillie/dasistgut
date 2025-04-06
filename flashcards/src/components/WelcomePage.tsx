@@ -99,34 +99,34 @@ export const WelcomePage = ({ onCategorySelect, darkMode = false, selectedCatego
   // If a category is selected, show subcategories
   if (selectedCategory) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)]">
-        <h2 className={`text-4xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-8`}>
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] p-4">
+        <h2 className={`text-2xl sm:text-4xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-4 sm:mb-8 text-center`}>
           {selectedCategory.name}
         </h2>
-        <p className={`text-xl ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-12`}>
+        <p className={`text-lg sm:text-xl ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-6 sm:mb-12 text-center`}>
           Vyberte si podkategorii pro studium
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full max-w-6xl">
           {selectedCategory.subcategories.map((subcategory) => (
             <button
               key={subcategory.id}
               onClick={() => onCategorySelect(subcategory.id)}
               className={`
                 group relative overflow-hidden
-                rounded-xl p-6 shadow-lg 
+                rounded-xl p-4 sm:p-6 shadow-lg 
                 transition-all duration-300 ease-out
                 transform hover:scale-[1.02]
                 ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'}
               `}
             >
               <div className="relative z-10 flex flex-col h-full">
-                <h3 className={`text-2xl font-bold mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                <h3 className={`text-xl sm:text-2xl font-bold mb-2 sm:mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                   {subcategory.name}
                 </h3>
 
                 <div className={`flex items-center gap-2 mt-auto ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -134,7 +134,7 @@ export const WelcomePage = ({ onCategorySelect, darkMode = false, selectedCatego
                       d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
                     />
                   </svg>
-                  <span className="text-lg font-medium">{subcategory.cards.length} kartiček</span>
+                  <span className="text-base sm:text-lg font-medium">{subcategory.cards.length} kartiček</span>
                 </div>
               </div>
 

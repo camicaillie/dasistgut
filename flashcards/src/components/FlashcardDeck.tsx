@@ -761,7 +761,7 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
   return (
     <div className={`flex flex-col min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-800'}`}>
       {/* Deck Header */}
-      <div className="px-4 py-2 flex justify-between items-center border-b">
+      <div className="px-2 sm:px-4 py-2 flex justify-between items-center border-b">
         <div className="flex items-center">
           <button 
             onClick={goBackToCategories}
@@ -769,25 +769,25 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
           >
             ← Back
           </button>
-          <h2 className="text-xl font-bold">{subcategoryId || categoryId}</h2>
+          <h2 className="text-lg sm:text-xl font-bold truncate max-w-[150px] sm:max-w-[300px]">{subcategoryId || categoryId}</h2>
         </div>
         <div className="flex items-center">
           {authStatus.isLoggedIn ? (
-            <div className="flex items-center text-sm mr-3">
+            <div className="flex items-center text-xs sm:text-sm mr-2 sm:mr-3">
               <span className="h-2 w-2 bg-green-500 rounded-full mr-1"></span>
               <span title={`Logged in as ${authStatus.email || 'authenticated user'}`} className="hidden sm:inline">
                 {authStatus.provider === 'google.com' ? 'Google Sync' : 'Sync Active'}
               </span>
             </div>
           ) : (
-            <div className="flex items-center text-sm text-yellow-600 dark:text-yellow-400 mr-3">
+            <div className="flex items-center text-xs sm:text-sm text-yellow-600 dark:text-yellow-400 mr-2 sm:mr-3">
               <span className="h-2 w-2 bg-yellow-500 rounded-full mr-1"></span>
               <span className="hidden sm:inline">Local Only</span>
             </div>
           )}
           <button 
             onClick={toggleShowStats}
-            className={`py-1 px-3 rounded ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
+            className={`py-1 px-2 sm:px-3 rounded ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
           >
             Stats
           </button>
@@ -795,7 +795,7 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
       </div>
       
       {/* Main content */}
-      <div className="flex-grow">
+      <div className="flex-grow overflow-x-hidden">
         {showIntroduction && introductionCourses[categoryId] && introductionCourses[categoryId][subcategoryId] ? (
           <IntroductionCourse
             slides={introductionCourses[categoryId][subcategoryId]}
@@ -803,35 +803,35 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
             darkMode={darkMode}
           />
         ) : (
-          <div className="space-y-6 p-4">
-            <div className="flex flex-col items-center gap-8 p-8">
+          <div className="space-y-4 p-2 sm:p-6 md:p-8 lg:p-10">
+            <div className="flex flex-col items-center gap-4 sm:gap-6 md:gap-8 mx-auto container">
               {/* Mode indicator and Stats button row */}
-              <div className="w-full max-w-2xl flex justify-between items-center">
-                <div className="flex items-center gap-4">
+              <div className="w-full max-w-[95vw] sm:max-w-full flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                   {isReviewingHard ? (
-                    <div className={`text-lg font-medium ${darkMode ? 'text-red-300 bg-red-900' : 'text-red-600 bg-red-50'} px-6 py-2 rounded-full`}>
+                    <div className={`text-base sm:text-lg font-medium ${darkMode ? 'text-red-300 bg-red-900' : 'text-red-600 bg-red-50'} px-3 sm:px-4 py-1 sm:py-2 rounded-full`}>
                       Reviewing Hard Cards ({filteredCards.length} remaining)
                     </div>
                   ) : useSRS && filterType === 'due' ? (
-                    <div className={`text-lg font-medium ${darkMode ? 'text-blue-300 bg-blue-900' : 'text-blue-600 bg-blue-50'} px-6 py-2 rounded-full`}>
+                    <div className={`text-base sm:text-lg font-medium ${darkMode ? 'text-blue-300 bg-blue-900' : 'text-blue-600 bg-blue-50'} px-3 sm:px-4 py-1 sm:py-2 rounded-full`}>
                       Due Cards: {dueCards.length}
                     </div>
                   ) : null}
                   
                   {/* SRS Toggle */}
                   <div className="flex items-center gap-2">
-                    <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>SRS</span>
+                    <span className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>SRS</span>
                     <button
                       onClick={() => setUseSRS(prev => !prev)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      className={`relative inline-flex h-5 w-10 sm:h-6 sm:w-11 items-center rounded-full transition-colors ${
                         useSRS 
                           ? darkMode ? 'bg-blue-600' : 'bg-blue-500'
                           : darkMode ? 'bg-gray-700' : 'bg-gray-300'
                       }`}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          useSRS ? 'translate-x-6' : 'translate-x-1'
+                        className={`inline-block h-3 w-3 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
+                          useSRS ? 'translate-x-5 sm:translate-x-6' : 'translate-x-1'
                         }`}
                       />
                     </button>
@@ -840,32 +840,32 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
                 
                 <button
                   onClick={() => setShowStats(true)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                  className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg ${
                     darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
                   } text-white transition-colors duration-200`}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
                   </svg>
-                  Study Stats
+                  <span className="hidden sm:inline">Study Stats</span>
                 </button>
               </div>
 
               {/* Search and filter */}
               {!isReviewingHard && (
-                <div className="w-full max-w-2xl">
-                  <div className="flex flex-col md:flex-row gap-4 mb-4">
+                <div className="w-full max-w-[95vw] sm:max-w-full">
+                  <div className="flex flex-col gap-4 mb-4">
                     <div className="flex-grow">
                       <div className="relative">
                         <input
                           type="text"
-                          placeholder="Vyhledejte kartičky podle obsahu, obtížnosti, atd..."
+                          placeholder="Vyhledat..."
                           value={searchQuery}
                           onChange={(e) => {
                             setSearchQuery(e.target.value);
-                            setCurrentIndex(0); // Reset to first card when searching
+                            setCurrentIndex(0);
                           }}
-                          className={`w-full px-4 py-2 border ${darkMode ? 'bg-gray-800 text-white border-gray-700 focus:ring-blue-600' : 'bg-white text-gray-900 border-gray-300 focus:ring-blue-500'} rounded-lg focus:outline-none focus:ring-2`}
+                          className={`w-full px-2 sm:px-4 py-2 border text-sm sm:text-base ${darkMode ? 'bg-gray-800 text-white border-gray-700 focus:ring-blue-600' : 'bg-white text-gray-900 border-gray-300 focus:ring-blue-500'} rounded-lg focus:outline-none focus:ring-2`}
                         />
                         {searchQuery.trim() && (
                           <button
@@ -877,24 +877,24 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
                               darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-200'
                             }`}
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                             </svg>
                           </button>
                         )}
                       </div>
-                      <p className={`mt-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        Vyhledejte podle: obsahu kartičky, obtížnosti (hard,medium,easy), termínu splatnosti, intervalu, úspěšnosti, nebo počtu opakování
+                      <p className={`mt-1 text-[10px] sm:text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Vyhledejte podle: obsahu, obtížnosti (hard/medium/easy), termínu, intervalu
                       </p>
                     </div>
-                    <div className="flex">
+                    <div className="flex w-full">
                       <select
                         value={filterType}
                         onChange={(e) => {
                           setFilterType(e.target.value as any);
-                          setCurrentIndex(0); // Reset to first card when filtering
+                          setCurrentIndex(0);
                         }}
-                        className={`px-4 py-2 border rounded-lg ${darkMode ? 'bg-gray-800 text-white border-gray-700 focus:ring-blue-600' : 'bg-white text-gray-700 border-gray-300 focus:ring-blue-500'} focus:outline-none focus:ring-2`}
+                        className={`w-full px-2 sm:px-4 py-2 text-sm sm:text-base border rounded-lg ${darkMode ? 'bg-gray-800 text-white border-gray-700 focus:ring-blue-600' : 'bg-white text-gray-700 border-gray-300 focus:ring-blue-500'} focus:outline-none focus:ring-2`}
                       >
                         <option value="all">All Cards</option>
                         <option value="favorites">Favorites</option>
@@ -908,15 +908,15 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
                   
                   {/* Filter info */}
                   {(filterType !== 'all' || searchQuery) && (
-                    <div className="mb-4 flex justify-between items-center">
-                      <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                      <p className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                         Showing: {filteredCards.length} of {cards.length} cards
                         {filterType !== 'all' && ` (${filterType})`}
                         {searchQuery && ` matching "${searchQuery}"`}
                       </p>
                       <button
                         onClick={() => { setFilterType('all'); setSearchQuery(''); }}
-                        className={`text-sm ${darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'}`}
+                        className={`text-xs sm:text-sm ${darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'}`}
                       >
                         Clear filters
                       </button>
@@ -925,7 +925,7 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
 
                   {/* SRS info (show due dates) */}
                   {useSRS && filteredCards.length > 0 && filteredCards[currentIndex].dueDate && (
-                    <div className={`mt-2 mb-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <div className={`mt-2 mb-4 text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                       <p>
                         Due: {filteredCards[currentIndex].dueDate.toLocaleDateString()} 
                         {filteredCards[currentIndex].interval && ` (Interval: ${filteredCards[currentIndex].interval} days)`}
@@ -936,16 +936,16 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
               )}
 
               {/* Progress bar */}
-              <div className="w-full max-w-2xl">
-                <div className="flex justify-between mb-2">
-                  <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              <div className="w-full max-w-[95vw] sm:max-w-full">
+                <div className="flex flex-col sm:flex-row justify-between gap-2 mb-2">
+                  <span className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     Progress: {isReviewingHard ? `${reviewedCardIds.size} / ${hardCards.length}` : `${progress.reviewed} / ${progress.total}`} cards reviewed
                   </span>
-                  <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <span className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     {Math.round((isReviewingHard ? reviewedCardIds.size / hardCards.length : progress.reviewed / progress.total) * 100)}%
                   </span>
                 </div>
-                <div className={`h-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded-full overflow-hidden`}>
+                <div className={`h-1.5 sm:h-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded-full overflow-hidden`}>
                   <div className="flex h-full">
                     <div 
                       className="bg-green-500 h-full transition-all duration-300"
@@ -961,7 +961,7 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
                     />
                   </div>
                 </div>
-                <div className={`flex justify-between mt-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                <div className={`flex flex-wrap justify-between gap-2 mt-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   <span>Easy: {isReviewingHard ? reviewResults.easy : progress.easy}</span>
                   <span>Medium: {isReviewingHard ? reviewResults.medium : progress.medium}</span>
                   <span>Hard: {isReviewingHard ? reviewResults.hard : progress.hard}</span>
@@ -969,11 +969,11 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
                 </div>
               </div>
 
-              <div className={`text-2xl font-bold ${darkMode ? 'text-white bg-gray-800' : 'text-gray-700 bg-white'} px-6 py-2 rounded-full shadow-sm`}>
+              <div className={`text-lg sm:text-2xl font-bold ${darkMode ? 'text-white bg-gray-800' : 'text-gray-700 bg-white'} px-4 sm:px-6 py-2 rounded-full shadow-sm`}>
                 Card {currentIndex + 1} of {filteredCards.length}
               </div>
               
-              <div className="perspective-1000">
+              <div className="perspective-1000 w-full max-w-[95vw] sm:max-w-full md:max-w-xl lg:max-w-2xl">
                 <Flashcard
                   front={filteredCards[currentIndex].front}
                   back={filteredCards[currentIndex].back}
@@ -989,30 +989,30 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
               <div className="flex gap-4">
                 <button
                   onClick={handlePrevious}
-                  className={`px-6 py-3 ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
+                  className={`px-4 sm:px-6 py-2 sm:py-3 ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
                 >
                   Previous
                 </button>
                 <button
                   onClick={handleNext}
-                  className={`px-6 py-3 ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
+                  className={`px-4 sm:px-6 py-2 sm:py-3 ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
                 >
                   Next
                 </button>
               </div>
 
               {/* Keyboard shortcuts help */}
-              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-4`}>
+              <div className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-4 text-center`}>
                 Keyboard shortcuts: 
-                <span className={`mx-2 px-2 py-1 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded`}>Space</span> to flip card,
-                <span className={`mx-2 px-2 py-1 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded`}>←</span> previous card,
-                <span className={`mx-2 px-2 py-1 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded`}>→</span> next card
+                <span className={`mx-1 sm:mx-2 px-2 py-1 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded`}>Space</span> to flip card,
+                <span className={`mx-1 sm:mx-2 px-2 py-1 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded`}>←</span> previous card,
+                <span className={`mx-1 sm:mx-2 px-2 py-1 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded`}>→</span> next card
               </div>
 
               {/* Restart button */}
               <button
                 onClick={handleRestart}
-                className={`px-6 py-3 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
+                className={`px-4 sm:px-6 py-2 sm:py-3 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
               >
                 Restart Session
               </button>

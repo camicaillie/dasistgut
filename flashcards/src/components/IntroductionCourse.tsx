@@ -14,15 +14,10 @@ interface IntroductionCourseProps {
 
 export const IntroductionCourse = ({ darkMode = false, onComplete, slides }: IntroductionCourseProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
 
   const handleNext = () => {
     if (currentSlide < slides.length - 1) {
-      setIsAnimating(true);
-      setTimeout(() => {
-        setCurrentSlide(prev => prev + 1);
-        setIsAnimating(false);
-      }, 300);
+      setCurrentSlide(prev => prev + 1);
     } else {
       onComplete();
     }
@@ -30,11 +25,7 @@ export const IntroductionCourse = ({ darkMode = false, onComplete, slides }: Int
 
   const handlePrevious = () => {
     if (currentSlide > 0) {
-      setIsAnimating(true);
-      setTimeout(() => {
-        setCurrentSlide(prev => prev - 1);
-        setIsAnimating(false);
-      }, 300);
+      setCurrentSlide(prev => prev - 1);
     }
   };
 
@@ -57,37 +48,37 @@ export const IntroductionCourse = ({ darkMode = false, onComplete, slides }: Int
   const progress = ((currentSlide + 1) / slides.length) * 100;
 
   return (
-    <div className={`fixed inset-0 ${darkMode ? 'bg-black/70' : 'bg-black/50'} z-50 flex items-center justify-center p-4 backdrop-blur-sm`}>
+    <div className={`fixed inset-0 ${darkMode ? 'bg-black/70' : 'bg-black/50'} z-50 flex items-center justify-center p-2 sm:p-4 backdrop-blur-sm`}>
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.2 }}
-        className={`w-full max-w-2xl ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'} rounded-xl shadow-xl overflow-hidden backdrop-blur-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}
+        className={`w-full max-w-[95vw] sm:max-w-xl md:max-w-3xl lg:max-w-4xl ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'} rounded-xl shadow-xl overflow-hidden backdrop-blur-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}
       >
-        <div className="relative flex flex-col h-[80vh]">
+        <div className="relative flex flex-col h-[90vh] sm:h-[80vh] md:h-[70vh] lg:h-[75vh]">
           {/* Skip button */}
-          <div className="absolute top-4 right-16 z-20">
+          <div className="absolute top-2 sm:top-4 right-2 sm:right-16 z-20">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onComplete}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium 
-                transition-colors duration-200 flex items-center gap-2
+              className={`px-3 sm:px-4 py-1 rounded-lg text-xs sm:text-sm font-medium 
+                transition-colors duration-200 flex items-center gap-1 sm:gap-2
                 ${darkMode 
                   ? 'text-gray-300 hover:text-white hover:bg-gray-700/50 backdrop-blur-sm' 
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/50 backdrop-blur-sm'
                 }`}
             >
               Skip Course
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </motion.button>
           </div>
 
           {/* Progress bar */}
-          <div className="absolute top-0 left-0 w-full h-1 bg-gray-200/30 backdrop-blur-sm">
+          <div className={`h-1 sm:h-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} relative`}>
             <motion.div
               className={`h-full ${darkMode ? 'bg-blue-500' : 'bg-blue-500'}`}
               initial={{ width: 0 }}
@@ -100,7 +91,7 @@ export const IntroductionCourse = ({ darkMode = false, onComplete, slides }: Int
           </div>
 
           {/* Progress text */}
-          <div className={`absolute top-4 right-4 text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+          <div className={`absolute top-2 sm:top-4 left-2 sm:left-4 text-xs sm:text-sm md:text-base font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
             {currentSlide + 1} / {slides.length}
           </div>
 
@@ -112,13 +103,13 @@ export const IntroductionCourse = ({ darkMode = false, onComplete, slides }: Int
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4, ease: "easeOut" }}
-              className="p-6 pt-16"
+              className="p-3 sm:p-6 md:p-8 lg:p-10 pt-12 sm:pt-16"
             >
               <motion.h2 
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
-                className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}
+                className={`text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4 md:mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}
               >
                 {slides[currentSlide].title}
               </motion.h2>
@@ -126,7 +117,7 @@ export const IntroductionCourse = ({ darkMode = false, onComplete, slides }: Int
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
-                className={`prose ${darkMode ? 'prose-invert' : ''} max-w-none whitespace-pre-wrap`}
+                className={`prose ${darkMode ? 'prose-invert' : ''} max-w-none whitespace-pre-wrap text-sm sm:text-base md:text-lg lg:prose-xl`}
               >
                 {slides[currentSlide].content}
               </motion.div>
@@ -134,70 +125,45 @@ export const IntroductionCourse = ({ darkMode = false, onComplete, slides }: Int
           </div>
 
           {/* Navigation controls - Fixed at bottom */}
-          <div className={`border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} p-4 bg-inherit backdrop-blur-sm`}>
-            {/* Slide indicators */}
-            <div className="flex gap-2 mb-4 overflow-x-auto pb-2 justify-center">
-              {slides.map((_, index) => (
-                <motion.button
-                  key={index}
-                  whileHover={{ scale: 1.2 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => {
-                    if (!isAnimating) {
-                      setIsAnimating(true);
-                      setTimeout(() => {
-                        setCurrentSlide(index);
-                        setIsAnimating(false);
-                      }, 300);
-                    }
-                  }}
-                  className={`h-2 rounded-full transition-all duration-300 flex-shrink-0 ${
-                    index === currentSlide
-                      ? `w-8 ${darkMode ? 'bg-blue-500 shadow-glow-blue' : 'bg-blue-500 shadow-glow-blue'}`
-                      : `w-2 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'} hover:bg-blue-300`
-                  }`}
-                  disabled={isAnimating}
-                  aria-label={`Go to slide ${index + 1}`}
-                />
-              ))}
-            </div>
+          <div className="flex justify-between items-center p-3 sm:p-4 md:p-6 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}">
+            <button
+              onClick={handlePrevious}
+              disabled={currentSlide === 0}
+              className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base md:text-lg font-medium transition-colors duration-200 flex items-center gap-2
+                ${darkMode 
+                  ? 'text-gray-400 hover:text-white hover:bg-gray-700/50' 
+                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/50'
+                }
+                ${currentSlide === 0 ? 'opacity-50 cursor-not-allowed' : ''}
+              `}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span className="hidden sm:inline">Previous</span>
+            </button>
 
-            {/* Navigation buttons */}
-            <div className="flex justify-between items-center">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handlePrevious}
-                disabled={currentSlide === 0 || isAnimating}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2
-                  ${currentSlide === 0
-                    ? 'opacity-50 cursor-not-allowed'
-                    : darkMode
-                      ? 'text-gray-300 hover:text-white hover:bg-gray-700/50'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/50'}`}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Previous
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleNext}
-                disabled={isAnimating}
-                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200
-                  flex items-center gap-2 shadow-lg
-                  ${darkMode
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-glow-blue'
-                    : 'bg-blue-500 hover:bg-blue-600 text-white shadow-glow-blue'}`}
-              >
-                {currentSlide === slides.length - 1 ? 'Start Learning' : 'Next'}
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <button
+              onClick={handleNext}
+              className={`px-4 sm:px-6 py-2 rounded-lg text-sm sm:text-base md:text-lg font-medium transition-colors duration-200 flex items-center gap-2
+                ${darkMode 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'bg-blue-500 text-white hover:bg-blue-600'
+                }
+              `}
+            >
+              <span className="hidden sm:inline">
+                {currentSlide === slides.length - 1 ? 'Finish' : 'Next'}
+              </span>
+              <span className="sm:hidden">
+                {currentSlide === slides.length - 1 ? 'Done' : 'Next'}
+              </span>
+              {currentSlide < slides.length - 1 && (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              </motion.button>
-            </div>
+              )}
+            </button>
           </div>
         </div>
       </motion.div>

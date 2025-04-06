@@ -119,55 +119,78 @@ export const saveSRSData = async (
   cards: SRSCard[],
   currentIndex: number = 0
 ): Promise<void> => {
-  const docId = `${categoryId}_${subcategoryId}`; // e.g., "general_mathematics"
+  const docId = `${categoryId}_${subcategoryId}`;
   console.log(`saveSRSData called with category: ${categoryId}, subcategory: ${subcategoryId}, index: ${currentIndex}`);
   
-  // Always save to localStorage as a fallback, even if not authenticated
-  try {
-    localStorage.setItem(`flashcard_progress_${docId}`, currentIndex.toString());
-    localStorage.setItem(`flashcard_last_updated_${docId}`, new Date().toISOString());
-  } catch (e) {
-    console.error('Error saving to localStorage:', e);
-  }
-  
   if (!auth.currentUser) {
-    console.log('User not logged in, saved to localStorage only');
+    console.log('User not logged in, cannot save to Firestore');
     return;
   }
 
   const userId = auth.currentUser.uid;
-  console.log(`Saving to Firestore for user ${userId} (${auth.currentUser.email || 'no email'})`);
-  
-  // Store the combination of user ID and deck for easier retrieval in localStorage
-  const userProgressKey = `${userId}_${docId}`;
-  localStorage.setItem(`user_progress_${userProgressKey}`, currentIndex.toString());
+  console.log(`Preparing to save for user ${userId} (${auth.currentUser.email || 'no email'})`);
   
   const docRef = doc(db, 'users', userId, 'srsData', docId);
 
-  // Convert dates to ISO strings for Firestore
-  const serializedCards = cards.map(card => ({
-    ...card,
-    dueDate: card.dueDate ? card.dueDate.toISOString() : undefined,
-    lastReviewed: card.lastReviewed ? card.lastReviewed.toISOString() : undefined,
-  }));
+  // Clean and convert cards for Firestore
+  const serializedCards = cards.map(card => {
+    // Create a clean object with only the fields we want to store
+    const cleanCard = {
+      id: card.id,
+      front: card.front,
+      back: card.back,
+      favorite: card.favorite || false,
+      difficulty: card.difficulty || null,
+      dueDate: card.dueDate ? card.dueDate.toISOString() : null,
+      interval: card.interval || 0,
+      easeFactor: card.easeFactor || 2.5,
+      repetitions: card.repetitions || 0,
+      lastReviewed: card.lastReviewed ? card.lastReviewed.toISOString() : null,
+      timesReviewed: card.timesReviewed || 0,
+      successRate: card.successRate || 0
+    } as const;
+
+    // Remove any null values to avoid Firestore errors
+    return Object.fromEntries(
+      Object.entries(cleanCard).filter(([_, value]) => value !== null && value !== undefined)
+    );
+  });
 
   try {
-    await setDoc(docRef, { 
+    // Create a clean document object
+    const docData = {
       cards: serializedCards,
       currentIndex,
       lastUpdated: new Date().toISOString(),
-      userId: userId,
-      userEmail: auth.currentUser.email || 'no email',
+      userId,
+      userEmail: auth.currentUser.email || 'anonymous',
       categoryId,
       subcategoryId,
       provider: auth.currentUser.providerData.length > 0 ? 
-        auth.currentUser.providerData[0].providerId : 'unknown'
-    }, { merge: true });
-    console.log(`Successfully saved SRS data for ${docId} with index ${currentIndex}`);
+        auth.currentUser.providerData[0].providerId : 'anonymous'
+    };
+
+    // Save to Firestore
+    await setDoc(docRef, docData, { merge: true });
+    console.log(`✅ Successfully saved ${serializedCards.length} cards to Firestore for ${docId}`);
+    
+    // After successful Firestore save, update localStorage as backup
+    try {
+      localStorage.setItem(`flashcard_progress_${docId}`, currentIndex.toString());
+      localStorage.setItem(`flashcard_last_updated_${docId}`, new Date().toISOString());
+      localStorage.setItem(`user_progress_${userId}_${docId}`, currentIndex.toString());
+    } catch (e) {
+      console.warn('Could not save backup to localStorage:', e);
+    }
   } catch (error) {
-    console.error('Error saving SRS data to Firestore:', error);
-    // Don't throw the error - let the app continue even if saving fails
-    // We've already saved to localStorage as a backup
+    console.error('Error saving to Firestore:', error);
+    // Save to localStorage as fallback
+    try {
+      localStorage.setItem(`flashcard_progress_${docId}`, currentIndex.toString());
+      localStorage.setItem(`flashcard_last_updated_${docId}`, new Date().toISOString());
+    } catch (e) {
+      console.error('Complete save failure - could not save to Firestore or localStorage:', e);
+    }
   }
 };
 
@@ -196,89 +219,58 @@ export const loadSRSData = async (
     console.log(`User is authenticated with ID: ${userId}, email: ${auth.currentUser.email || 'no email'}`);
     console.log(`Looking for document ID: ${docId} for user ${userId}`);
     
-    // Also check for user-specific progress in localStorage
-    const userProgressKey = `${userId}_${docId}`;
-    const userLocalProgress = localStorage.getItem(`user_progress_${userProgressKey}`);
-    if (userLocalProgress) {
-      const userBackupIndex = parseInt(userLocalProgress, 10);
-      console.log(`Found user-specific local backup index: ${userBackupIndex} for ${userProgressKey}`);
-      // Use the user-specific backup if it exists
-      backupIndex = userBackupIndex;
-    }
-    
     const docRef = doc(db, 'users', userId, 'srsData', docId);
 
     try {
       const docSnap = await getDoc(docRef);
+      console.log('Firestore document snapshot:', docSnap.exists() ? 'exists' : 'does not exist');
+      
       if (docSnap.exists()) {
         const data = docSnap.data();
-        const savedCards = data.cards as SRSCard[];
+        console.log('Retrieved Firestore data:', {
+          currentIndex: data.currentIndex,
+          lastUpdated: data.lastUpdated,
+          cardCount: data.cards?.length || 0
+        });
         
-        // Use the Firestore index if available, or fall back to localStorage backup
-        let currentIndex = data.currentIndex;
-        
-        // If Firestore doesn't have an index but we have a backup, use that
-        if (currentIndex === undefined && backupIndex !== undefined) {
-          currentIndex = backupIndex;
-          console.log(`Using backup index: ${currentIndex}`);
-        } else if (currentIndex === undefined) {
-          currentIndex = 0;
-        }
-        
-        console.log(`Found saved data for ${docId} with ${savedCards?.length || 0} cards and index ${currentIndex}`);
-        
-        // If we have cards, return them with the current index
-        if (savedCards && savedCards.length > 0) {
+        if (data.cards && data.cards.length > 0) {
+          const processedCards = data.cards.map((card: { 
+            dueDate?: string; 
+            lastReviewed?: string;
+            [key: string]: any; 
+          }) => ({
+            ...card,
+            dueDate: card.dueDate ? new Date(card.dueDate) : undefined,
+            lastReviewed: card.lastReviewed ? new Date(card.lastReviewed) : undefined,
+          }));
+          
+          console.log(`Successfully loaded ${processedCards.length} cards from Firestore`);
           return { 
-            cards: savedCards.map(card => ({
-              ...card,
-              dueDate: card.dueDate ? new Date(card.dueDate) : undefined,
-              lastReviewed: card.lastReviewed ? new Date(card.lastReviewed) : undefined,
-            })),
-            currentIndex
+            cards: processedCards,
+            currentIndex: data.currentIndex ?? 0
           };
         }
-      } else {
-        console.log(`No saved data found in Firestore for ${docId}`);
       }
+      
+      console.log('No valid card data found in Firestore, using default cards');
     } catch (error) {
-      console.error('Error loading SRS data from Firestore:', error);
-    }
-    
-    // If we reached here, we couldn't load saved card data from Firestore
-    // Check if we at least have a backup index
-    if (backupIndex !== undefined) {
-      console.log(`Using backup index ${backupIndex} with default cards`);
-      return { 
-        cards: defaultCards.map((card, index) => ({
-          ...card,
-          id: index + 1,
-        })),
-        currentIndex: backupIndex
-      };
+      console.error('Error loading from Firestore:', error);
     }
   } else {
-    console.log('User not logged in, checking only for local storage data');
-    // If we have a local backup index but no authentication, still use it
-    if (backupIndex !== undefined) {
-      console.log(`Using local backup index ${backupIndex} with default cards`);
-      return { 
-        cards: defaultCards.map((card, index) => ({
-          ...card,
-          id: index + 1,
-        })),
-        currentIndex: backupIndex
-      };
-    }
+    console.log('User not authenticated, skipping Firestore load');
   }
 
-  // If no data exists in Firestore, no local backups were found, or user is not logged in
-  console.log('No saved data found anywhere, returning default cards from beginning');
+  // If we reach here, either:
+  // 1. User is not authenticated
+  // 2. Firestore load failed
+  // 3. No data exists in Firestore
+  // Use default cards with backup index if available
+  console.log(`Using default cards with${backupIndex ? ' backup' : ' initial'} index: ${backupIndex}`);
   return { 
     cards: defaultCards.map((card, index) => ({
       ...card,
       id: index + 1,
     })),
-    currentIndex: 0 
+    currentIndex: backupIndex
   };
 };

@@ -77,25 +77,29 @@ export const db = (() => {
     // Enable offline persistence for Firestore
     const setupFirestorePersistence = async () => {
       try {
-        await enableIndexedDbPersistence(firestore);
-        console.log('Firestore offline persistence enabled');
+        await enableIndexedDbPersistence(firestore, {
+          forceOwnership: false // Allow multiple tabs
+        });
+        console.log('✅ Firestore offline persistence enabled successfully');
       } catch (err: any) {
         if (err.code === 'failed-precondition') {
-          console.error('Multiple tabs open, persistence can only be enabled in one tab at a time');
+          // Multiple tabs open, persistence can only be enabled in one tab at a time
+          // This is normal - the first tab will handle persistence
+          console.log('ℹ️ Another tab is handling persistence - this is normal');
         } else if (err.code === 'unimplemented') {
-          console.error('The current browser does not support all of the features required to enable persistence');
+          console.warn('⚠️ This browser does not support persistence');
         } else {
-          console.error('Unknown error when enabling Firestore persistence:', err);
+          console.error('❌ Unexpected error enabling persistence:', err);
         }
       }
     };
     
-    // Run the persistence setup (don't await it to avoid blocking)
+    // Run the persistence setup
     setupFirestorePersistence();
     
     return firestore;
   } catch (error) {
-    console.error('Error initializing Firestore:', error);
+    console.error('❌ Critical error initializing Firestore:', error);
     return {} as any;
   }
 })();

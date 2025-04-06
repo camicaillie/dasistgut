@@ -9,7 +9,7 @@ interface PasswordPromptProps {
 
 export const PasswordPrompt: React.FC<PasswordPromptProps> = ({ onCorrectPassword, darkMode }) => {
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | boolean>(false);
   const [isLoading, setIsLoading] = useState(false);
   const [passwordVerified, setPasswordVerified] = useState(false);
 
@@ -47,12 +47,7 @@ export const PasswordPrompt: React.FC<PasswordPromptProps> = ({ onCorrectPasswor
       onCorrectPassword();
     } catch (error) {
       console.error('Google login failed:', error);
-      // If Google login fails, still allow access since the password was correct
-      if (passwordVerified) {
-        onCorrectPassword();
-      } else {
-        setError(true);
-      }
+      setError('Google login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }

@@ -7,7 +7,6 @@ import { GuideTooltip } from './components/GuideTooltip';
 import { flashcardSets, FlashcardSet } from './data/flashcards';
 import { auth } from './utils/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import React from 'react';
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);

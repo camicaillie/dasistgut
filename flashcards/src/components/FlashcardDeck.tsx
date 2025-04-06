@@ -12,9 +12,8 @@ import {
   saveSRSData,
   getDueCards
 } from '../utils/spacedRepetition';
-import { doc, setDoc, getDoc, collection, addDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, addDoc } from 'firebase/firestore';
 import { auth, db } from '../utils/firebase';
-import { User } from 'firebase/auth';
 
 interface FlashcardDeckProps {
   cards: FlashcardType[];
@@ -526,7 +525,7 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
     checkAuth();
     
     // Listen for auth state changes
-    const unsubscribe = auth.onAuthStateChanged((user: User | null) => {
+    const unsubscribe = auth.onAuthStateChanged(() => {
       checkAuth();
     });
     

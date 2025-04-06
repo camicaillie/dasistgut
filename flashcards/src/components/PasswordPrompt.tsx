@@ -1,17 +1,10 @@
 import React, { useState } from 'react';
-import { signInWithPopup, signInWithEmailAndPassword, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../utils/firebase';
 
 interface PasswordPromptProps {
   onCorrectPassword: () => void;
   darkMode: boolean;
-}
-
-// Create a persistent user ID based on password
-function generatePersistentUserEmail(password: string): string {
-  // Create a consistent email from the password - DO NOT use this approach for sensitive apps
-  // This is a simplified approach for this specific app
-  return `user_${password}@flashcards-app.com`;
 }
 
 export const PasswordPrompt: React.FC<PasswordPromptProps> = ({ onCorrectPassword, darkMode }) => {

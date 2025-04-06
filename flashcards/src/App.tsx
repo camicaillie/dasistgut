@@ -6,7 +6,8 @@ import { WelcomeGuide } from './components/WelcomeGuide';
 import { GuideTooltip } from './components/GuideTooltip';
 import { flashcardSets, FlashcardSet } from './data/flashcards';
 import { auth } from './utils/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { StudyStats } from './components/StudyStats';
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -17,10 +18,14 @@ function App() {
   const [showWelcomeGuide, setShowWelcomeGuide] = useState(false);
   const [hasSeenGuide, setHasSeenGuide] = useState(false);
   const [isAuthInitialized, setIsAuthInitialized] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [showStats, setShowStats] = useState(false);
 
   // Check for existing Firebase authentication
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
       if (user) {
         console.log('User is already signed in:', user.uid);
         console.log('Authentication method:', user.providerId || 'unknown');
@@ -176,13 +181,35 @@ function App() {
     setDarkMode(prev => !prev);
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setIsAuthenticated(false);
+      setShowUserMenu(false);
+      // Clear any stored auth data
+      localStorage.removeItem('manualAuth');
+      localStorage.removeItem('currentUserId');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  const handleShowStats = () => {
+    setShowStats(true);
+    setShowUserMenu(false);
+  };
+
+  const handleCloseStats = () => {
+    setShowStats(false);
+  };
+
   const renderHeader = () => (
     <header className={`${darkMode ? 'bg-gray-800 shadow-gray-900' : 'bg-white shadow-sm'} transition-colors duration-200 sticky top-0 z-10`}>
       <div className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
           <div className="flex items-center justify-between">
             <GuideTooltip 
-              text="Welcome to your flashcards app! Start by selecting a category below."
+              text="Vítejte v aplikaci flashcards! Začněte výběrem kategorii níže."
               darkMode={darkMode}
               position="bottom"
             >
@@ -257,6 +284,61 @@ function App() {
                 <span className="text-sm">Help</span>
               </button>
             </GuideTooltip>
+            {isAuthenticated && user && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors duration-200 ${
+                    darkMode 
+                      ? 'bg-gray-700 text-white hover:bg-gray-600' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span className="text-sm truncate max-w-[100px]">{user.displayName || user.email}</span>
+                </button>
+                {showUserMenu && (
+                  <div className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg ${
+                    darkMode ? 'bg-gray-700' : 'bg-white'
+                  } ring-1 ring-black ring-opacity-5`}>
+                    <div className="py-1">
+                      <button
+                        onClick={handleShowStats}
+                        className={`block w-full text-left px-4 py-2 text-sm ${
+                          darkMode 
+                            ? 'text-white hover:bg-gray-600 hover:text-white' 
+                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
+                          Study Stats
+                        </div>
+                      </button>
+                      <button
+                        onClick={handleLogout}
+                        className={`block w-full text-left px-4 py-2 text-sm ${
+                          darkMode 
+                            ? 'text-red-400 hover:bg-gray-600 hover:text-red-300' 
+                            : 'text-red-600 hover:bg-gray-100 hover:text-red-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                          </svg>
+                          Sign Out
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="hidden sm:block">
               <GuideTooltip 
                 text="Toggle between light and dark mode for comfortable viewing"
@@ -364,6 +446,9 @@ function App() {
       </main>
       {showWelcomeGuide && (
         <WelcomeGuide darkMode={darkMode} onClose={handleGuideClose} />
+      )}
+      {showStats && (
+        <StudyStats darkMode={darkMode} onClose={handleCloseStats} />
       )}
     </div>
   );

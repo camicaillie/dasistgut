@@ -176,15 +176,6 @@ export const WelcomePage = ({ onCategorySelect, darkMode = false, selectedCatego
           </button>
         ))}
       </div>
-
-      <button
-        onClick={() => auth.signOut()}
-        className={`mt-8 ${
-          darkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'
-        } text-white rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1`}
-      >
-        Odhlásit se
-      </button>
     </div>
   );
 };

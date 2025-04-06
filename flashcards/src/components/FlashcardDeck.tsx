@@ -859,7 +859,7 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
                       <div className="relative">
                         <input
                           type="text"
-                          placeholder="Search cards by content, difficulty, due date, etc..."
+                          placeholder="Vyhledejte kartičky podle obsahu, obtížnosti, atd..."
                           value={searchQuery}
                           onChange={(e) => {
                             setSearchQuery(e.target.value);
@@ -884,7 +884,7 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
                         )}
                       </div>
                       <p className={`mt-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        Search by: card content, difficulty (easy/medium/hard), due date, interval, success rate, or times reviewed
+                        Vyhledejte podle: obsahu kartičky, obtížnosti (hard,medium,easy), termínu splatnosti, intervalu, úspěšnosti, nebo počtu opakování
                       </p>
                     </div>
                     <div className="flex">

@@ -1,21 +1,67 @@
 import React, { useState } from 'react';
+import { signInWithPopup, signInWithEmailAndPassword, GoogleAuthProvider } from 'firebase/auth';
+import { auth, googleProvider } from '../utils/firebase';
 
 interface PasswordPromptProps {
   onCorrectPassword: () => void;
   darkMode: boolean;
 }
 
+// Create a persistent user ID based on password
+function generatePersistentUserEmail(password: string): string {
+  // Create a consistent email from the password - DO NOT use this approach for sensitive apps
+  // This is a simplified approach for this specific app
+  return `user_${password}@flashcards-app.com`;
+}
+
 export const PasswordPrompt: React.FC<PasswordPromptProps> = ({ onCorrectPassword, darkMode }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [passwordVerified, setPasswordVerified] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Password submitted:', password);
+    
     if (password === 'fenomen') {
-      onCorrectPassword();
+      setPasswordVerified(true);
+      // Set manual authentication flag in localStorage as a fallback
+      localStorage.setItem('manualAuth', 'true');
+      
+      // Move directly to Google sign-in after password verification
+      handleGoogleLogin();
     } else {
+      console.log('Password incorrect');
       setError(true);
       setPassword('');
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    console.log('Starting Google login process...');
+    
+    try {
+      // Sign in with Google
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log('Google login successful:', result.user.uid);
+      
+      // Store the user ID for consistency
+      localStorage.setItem('currentUserId', result.user.uid);
+      
+      // Call the callback function after successful login
+      onCorrectPassword();
+    } catch (error) {
+      console.error('Google login failed:', error);
+      // If Google login fails, still allow access since the password was correct
+      if (passwordVerified) {
+        onCorrectPassword();
+      } else {
+        setError(true);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -28,7 +74,8 @@ export const PasswordPrompt: React.FC<PasswordPromptProps> = ({ onCorrectPasswor
         <p className={`text-sm sm:text-base text-center mb-8 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
           Pro pokračování zadejte heslo
         </p>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        
+        <form onSubmit={handlePasswordSubmit}>
           <div>
             <div className="relative">
               <input
@@ -47,6 +94,7 @@ export const PasswordPrompt: React.FC<PasswordPromptProps> = ({ onCorrectPasswor
                 } focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200`}
                 placeholder="Zadejte heslo"
                 autoComplete="current-password"
+                disabled={isLoading || passwordVerified}
               />
               {error && (
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3">
@@ -57,19 +105,34 @@ export const PasswordPrompt: React.FC<PasswordPromptProps> = ({ onCorrectPasswor
               )}
             </div>
             {error && (
-              <p className="text-red-500 text-sm mt-2 text-center">Nesprávné heslo. Zkuste to prosím znovu.</p>
+              <p className="text-red-500 text-sm mt-2 text-center">Nesprávné heslo nebo chyba při přihlášení. Zkuste to prosím znovu.</p>
             )}
           </div>
-          <button
-            type="submit"
-            className={`w-full py-3 px-4 rounded-lg text-base sm:text-lg font-medium ${
-              darkMode 
-                ? 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800' 
-                : 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700'
-            } text-white transition-colors duration-200 transform hover:scale-[1.02] active:scale-[0.98]`}
-          >
-            Vstoupit do aplikace
-          </button>
+          
+          {passwordVerified ? (
+            <div className="mt-6 text-center">
+              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
+                Heslo ověřeno. Přihlašování pomocí Google...
+              </p>
+              <div className="animate-spin mx-auto h-8 w-8 border-t-2 border-b-2 border-blue-500 rounded-full"></div>
+            </div>
+          ) : (
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`w-full mt-6 py-3 px-4 rounded-lg text-base sm:text-lg font-medium ${
+                isLoading
+                  ? darkMode
+                    ? 'bg-blue-800 cursor-not-allowed'
+                    : 'bg-blue-400 cursor-not-allowed'
+                  : darkMode 
+                    ? 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800' 
+                    : 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700'
+              } text-white transition-colors duration-200 transform hover:scale-[1.02] active:scale-[0.98]`}
+            >
+              {isLoading ? 'Přihlašování...' : 'Vstoupit do aplikace'}
+            </button>
+          )}
         </form>
       </div>
     </div>

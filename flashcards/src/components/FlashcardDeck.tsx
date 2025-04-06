@@ -12,6 +12,9 @@ import {
   saveSRSData,
   getDueCards
 } from '../utils/spacedRepetition';
+import { doc, setDoc, getDoc, collection, addDoc } from 'firebase/firestore';
+import { auth, db } from '../utils/firebase';
+import { User } from 'firebase/auth';
 
 interface FlashcardDeckProps {
   cards: FlashcardType[];
@@ -37,11 +40,19 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
   const [showReviewPrompt, setShowReviewPrompt] = useState(false);
   const [showScoreboard, setShowScoreboard] = useState(false);
   const [categoryName, setCategoryName] = useState('');
+  const [authStatus, setAuthStatus] = useState<{isLoggedIn: boolean, provider: string, email: string | null}>({
+    isLoggedIn: false,
+    provider: '',
+    email: null
+  });
 
   // Load SRS data on component mount and when category/subcategory changes
   useEffect(() => {
     const fetchCards = async () => {
+      // Always show loading state when changing categories/subcategories
       setIsLoading(true);
+      console.log(`Loading data for category: ${categoryId}, subcategory: ${subcategoryId}`);
+      
       try {
         const defaultCards = initialCards.map((card, index) => ({
           ...card,
@@ -52,8 +63,19 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
           easeFactor: 2.5,
           repetitions: 0
         }));
-        const loadedCards = await loadSRSData(categoryId, subcategoryId, defaultCards);
-        setCards(loadedCards);
+        
+        // Get saved data including current index
+        const loadedData = await loadSRSData(categoryId, subcategoryId, defaultCards);
+        setCards(loadedData.cards);
+        
+        // Set the current index from the saved data
+        console.log(`Loaded current index: ${loadedData.currentIndex} for ${categoryId}/${subcategoryId}`);
+        if (loadedData.currentIndex < loadedData.cards.length) {
+          setCurrentIndex(loadedData.currentIndex);
+        } else {
+          // If the saved index is out of bounds, reset to 0
+          setCurrentIndex(0);
+        }
       } catch (error) {
         console.error('Error loading SRS data:', error);
         // Fallback to default cards if loading fails
@@ -66,6 +88,7 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
           easeFactor: 2.5,
           repetitions: 0
         })));
+        setCurrentIndex(0); // Reset to beginning
       } finally {
         setIsLoading(false);
       }
@@ -81,20 +104,122 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
     setCategoryName(category);
   }, []);
 
-  // Save cards data whenever it changes
+  // Save when card difficulty changes (meaning the user is actively working through cards)
   useEffect(() => {
     const saveCards = async () => {
       if (useSRS && cards.length > 0) {
         try {
-          await saveSRSData(categoryId, subcategoryId, cards);
+          console.log(`Saving cards and index ${currentIndex} for ${categoryId}/${subcategoryId}`);
+          await saveSRSData(categoryId, subcategoryId, cards, currentIndex);
         } catch (error) {
           console.error('Error saving SRS data:', error);
         }
       }
     };
 
+    // We want to save immediately whenever cards change
     saveCards();
-  }, [cards, categoryId, subcategoryId, useSRS]);
+    
+    // Save data when unmounting component (switching between decks)
+    return () => {
+      if (useSRS && cards.length > 0) {
+        console.log(`Unmounting - saving final state for ${categoryId}/${subcategoryId}, currentIndex: ${currentIndex}`);
+        
+        // Use localStorage as a reliable backup when component unmounts
+        try {
+          const docId = `${categoryId}_${subcategoryId}`;
+          localStorage.setItem(`flashcard_progress_${docId}`, currentIndex.toString());
+        } catch (e) {
+          console.error('Failed to save to localStorage:', e);
+        }
+        
+        // Also try to save to Firestore
+        saveSRSData(categoryId, subcategoryId, cards, currentIndex)
+          .catch(error => console.error('Error saving SRS data on unmount:', error));
+      }
+    };
+  }, [cards, categoryId, subcategoryId, useSRS, currentIndex]);
+
+  // Save currentIndex immediately every time it changes
+  useEffect(() => {
+    const saveCurrentIndexWithDebounce = () => {
+      const debounceTimer = setTimeout(async () => {
+        if (useSRS && cards.length > 0 && auth.currentUser) {
+          try {
+            const userId = auth.currentUser.uid;
+            const docId = `${categoryId}_${subcategoryId}`;
+            console.log(`Syncing currentIndex (${currentIndex}) for ${docId} to user ${userId}`);
+            
+            // Always store in localStorage for offline backup
+            localStorage.setItem(`flashcard_progress_${docId}`, currentIndex.toString());
+            localStorage.setItem(`flashcard_last_updated_${docId}`, new Date().toISOString());
+            
+            // Store the combination of user ID and deck for easier retrieval
+            const progressKey = `${userId}_${docId}`;
+            localStorage.setItem(`user_progress_${progressKey}`, currentIndex.toString());
+            
+            // Direct call to Firestore to save the current index
+            const docRef = doc(db, 'users', userId, 'srsData', docId);
+            await setDoc(docRef, { 
+              currentIndex,
+              lastUpdated: new Date().toISOString(),
+              userId: userId,
+              userEmail: auth.currentUser.email || 'unknown',
+              categoryId,
+              subcategoryId
+            }, { merge: true });
+            
+            console.log(`Successfully saved progress to Firestore for ${userId}`);
+          } catch (error) {
+            console.error('Error in index sync:', error);
+            // On error, make sure we at least have the localStorage backup
+            const docId = `${categoryId}_${subcategoryId}`;
+            localStorage.setItem(`flashcard_progress_${docId}`, currentIndex.toString());
+          }
+        } else if (cards.length > 0) {
+          // If not signed in, still save to localStorage
+          const docId = `${categoryId}_${subcategoryId}`;
+          localStorage.setItem(`flashcard_progress_${docId}`, currentIndex.toString());
+          console.log(`Saved progress to localStorage only: ${currentIndex} for ${docId}`);
+        }
+      }, 300);
+      
+      return debounceTimer;
+    };
+    
+    const timerId = saveCurrentIndexWithDebounce();
+    return () => clearTimeout(timerId);
+  }, [currentIndex, categoryId, subcategoryId, auth.currentUser, useSRS, cards.length]);
+  
+  // Event listener for when the page/tab is about to close
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (useSRS && cards.length > 0 && auth.currentUser) {
+        try {
+          console.log(`Page unloading - trying to save index: ${currentIndex}`);
+          const userId = auth.currentUser.uid;
+          const docId = `${categoryId}_${subcategoryId}`;
+          const docRef = doc(db, 'users', userId, 'srsData', docId);
+          
+          // Use synchronous localStorage as a backup in case the async Firestore call doesn't complete
+          localStorage.setItem(`flashcard_progress_${docId}`, currentIndex.toString());
+          
+          // Try to save to Firestore, but this might not complete if the page is closing
+          setDoc(docRef, { 
+            currentIndex,
+            lastUpdated: new Date().toISOString()
+          }, { merge: true });
+        } catch (error) {
+          console.error('Error saving before unload:', error);
+        }
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [currentIndex, categoryId, subcategoryId, useSRS, cards.length, auth.currentUser]);
 
   // Filter cards based on search query and filter type
   const filteredCards = cards.filter(card => {
@@ -303,8 +428,13 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
     });
   };
 
-  // Save study session to localStorage
-  const saveStudySession = () => {
+  // Save study session to Firestore
+  const saveStudySession = async () => {
+    if (!auth.currentUser) {
+      console.log('User not logged in, cannot save study session');
+      return;
+    }
+
     const easy = cards.filter(card => card.difficulty === 'easy').length;
     const medium = cards.filter(card => card.difficulty === 'medium').length;
     const hard = cards.filter(card => card.difficulty === 'hard').length;
@@ -317,19 +447,15 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
       cardsReviewed,
       performance: { easy, medium, hard },
       category: categoryName || 'General',
+      userId: auth.currentUser.uid
     };
     
-    // Load existing sessions
-    const savedSessions = localStorage.getItem('flashcards-study-sessions');
-    let sessions = [];
-    
-    if (savedSessions) {
-      sessions = JSON.parse(savedSessions);
+    try {
+      const sessionsRef = collection(db, 'studySessions');
+      await addDoc(sessionsRef, session);
+    } catch (error) {
+      console.error('Error saving study session:', error);
     }
-    
-    // Add new session and save
-    sessions.push(session);
-    localStorage.setItem('flashcards-study-sessions', JSON.stringify(sessions));
   };
 
   // Modified handleRestart to save session
@@ -371,6 +497,74 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
     setReviewResults({ easy: 0, medium: 0, hard: 0 });
     setSearchQuery('');
     setFilterType('all');
+  };
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = () => {
+      const user = auth.currentUser;
+      if (user) {
+        const provider = user.providerData.length > 0 
+          ? user.providerData[0].providerId 
+          : 'anonymous';
+        setAuthStatus({
+          isLoggedIn: true,
+          provider,
+          email: user.email
+        });
+        console.log(`User is authenticated: ${user.uid}, Provider: ${provider}, Email: ${user.email || 'none'}`);
+      } else {
+        setAuthStatus({
+          isLoggedIn: false,
+          provider: '',
+          email: null
+        });
+        console.log('User is not authenticated');
+      }
+    };
+    
+    checkAuth();
+    
+    // Listen for auth state changes
+    const unsubscribe = auth.onAuthStateChanged((user: User | null) => {
+      checkAuth();
+    });
+    
+    return () => unsubscribe();
+  }, []);
+
+  // Navigation handler to go back to categories
+  const goBackToCategories = () => {
+    // Save current state before navigating
+    if (useSRS && cards.length > 0) {
+      try {
+        const docId = `${categoryId}_${subcategoryId}`;
+        localStorage.setItem(`flashcard_progress_${docId}`, currentIndex.toString());
+        
+        if (auth.currentUser) {
+          const userId = auth.currentUser.uid;
+          const docRef = doc(db, 'users', userId, 'srsData', docId);
+          setDoc(docRef, { 
+            currentIndex,
+            lastUpdated: new Date().toISOString()
+          }, { merge: true });
+        }
+      } catch (error) {
+        console.error('Error saving before navigating back:', error);
+      }
+    }
+    
+    // Use window.history to go back or redirect to home
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.location.href = '/';
+    }
+  };
+
+  // Toggle stats display
+  const toggleShowStats = () => {
+    setShowStats(!showStats);
   };
 
   // Show scoreboard
@@ -550,248 +744,298 @@ export const FlashcardDeck = ({ cards: initialCards, darkMode = false, categoryI
   // Add loading indicator at the top of the return statement
   if (isLoading) {
     return (
-      <div className={`flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-        <p className="text-lg">Loading flashcards...</p>
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-900 dark:border-white mx-auto mb-4"></div>
+          <p className="text-lg font-medium text-gray-900 dark:text-white">Loading flashcards...</p>
+          {authStatus.isLoggedIn && (
+            <p className="text-md text-gray-600 dark:text-gray-300 mt-2">
+              Syncing data for {authStatus.email || 'your account'} 
+              {authStatus.provider === 'google.com' && ' (Google)'}
+            </p>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {showIntroduction && categoryId && subcategoryId && introductionCourses[categoryId]?.[subcategoryId] ? (
-        <IntroductionCourse
-          slides={introductionCourses[categoryId][subcategoryId]}
-          onComplete={() => setShowIntroduction(false)}
-          darkMode={darkMode}
-        />
-      ) : (
-        <>
-          <div className="flex flex-col items-center gap-8 p-8">
-            {/* Mode indicator and Stats button row */}
-            <div className="w-full max-w-2xl flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                {isReviewingHard ? (
-                  <div className={`text-lg font-medium ${darkMode ? 'text-red-300 bg-red-900' : 'text-red-600 bg-red-50'} px-6 py-2 rounded-full`}>
-                    Reviewing Hard Cards ({filteredCards.length} remaining)
-                  </div>
-                ) : useSRS && filterType === 'due' ? (
-                  <div className={`text-lg font-medium ${darkMode ? 'text-blue-300 bg-blue-900' : 'text-blue-600 bg-blue-50'} px-6 py-2 rounded-full`}>
-                    Due Cards: {dueCards.length}
-                  </div>
-                ) : null}
-                
-                {/* SRS Toggle */}
-                <div className="flex items-center gap-2">
-                  <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>SRS</span>
-                  <button
-                    onClick={() => setUseSRS(prev => !prev)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      useSRS 
-                        ? darkMode ? 'bg-blue-600' : 'bg-blue-500'
-                        : darkMode ? 'bg-gray-700' : 'bg-gray-300'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        useSRS ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
-              
-              <button
-                onClick={() => setShowStats(true)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-                  darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
-                } text-white transition-colors duration-200`}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-                </svg>
-                Study Stats
-              </button>
+    <div className={`flex flex-col min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-800'}`}>
+      {/* Deck Header */}
+      <div className="px-4 py-2 flex justify-between items-center border-b">
+        <div className="flex items-center">
+          <button 
+            onClick={goBackToCategories}
+            className={`mr-2 py-1 px-2 rounded ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
+          >
+            ← Back
+          </button>
+          <h2 className="text-xl font-bold">{subcategoryId || categoryId}</h2>
+        </div>
+        <div className="flex items-center">
+          {authStatus.isLoggedIn ? (
+            <div className="flex items-center text-sm mr-3">
+              <span className="h-2 w-2 bg-green-500 rounded-full mr-1"></span>
+              <span title={`Logged in as ${authStatus.email || 'authenticated user'}`} className="hidden sm:inline">
+                {authStatus.provider === 'google.com' ? 'Google Sync' : 'Sync Active'}
+              </span>
             </div>
-
-            {/* Search and filter */}
-            {!isReviewingHard && (
-              <div className="w-full max-w-2xl">
-                <div className="flex flex-col md:flex-row gap-4 mb-4">
-                  <div className="flex-grow">
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="Search cards by content, difficulty, due date, etc..."
-                        value={searchQuery}
-                        onChange={(e) => {
-                          setSearchQuery(e.target.value);
-                          setCurrentIndex(0); // Reset to first card when searching
-                        }}
-                        className={`w-full px-4 py-2 border ${darkMode ? 'bg-gray-800 text-white border-gray-700 focus:ring-blue-600' : 'bg-white text-gray-900 border-gray-300 focus:ring-blue-500'} rounded-lg focus:outline-none focus:ring-2`}
-                      />
-                      {searchQuery.trim() && (
-                        <button
-                          onClick={() => {
-                            setSearchQuery('');
-                            setCurrentIndex(0);
-                          }}
-                          className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-opacity-20 ${
-                            darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-200'
-                          }`}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      )}
+          ) : (
+            <div className="flex items-center text-sm text-yellow-600 dark:text-yellow-400 mr-3">
+              <span className="h-2 w-2 bg-yellow-500 rounded-full mr-1"></span>
+              <span className="hidden sm:inline">Local Only</span>
+            </div>
+          )}
+          <button 
+            onClick={toggleShowStats}
+            className={`py-1 px-3 rounded ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
+          >
+            Stats
+          </button>
+        </div>
+      </div>
+      
+      {/* Main content */}
+      <div className="flex-grow">
+        {showIntroduction && introductionCourses[categoryId] && introductionCourses[categoryId][subcategoryId] ? (
+          <IntroductionCourse
+            slides={introductionCourses[categoryId][subcategoryId]}
+            onComplete={() => setShowIntroduction(false)}
+            darkMode={darkMode}
+          />
+        ) : (
+          <div className="space-y-6 p-4">
+            <div className="flex flex-col items-center gap-8 p-8">
+              {/* Mode indicator and Stats button row */}
+              <div className="w-full max-w-2xl flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                  {isReviewingHard ? (
+                    <div className={`text-lg font-medium ${darkMode ? 'text-red-300 bg-red-900' : 'text-red-600 bg-red-50'} px-6 py-2 rounded-full`}>
+                      Reviewing Hard Cards ({filteredCards.length} remaining)
                     </div>
-                    <p className={`mt-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      Search by: card content, difficulty (easy/medium/hard), due date, interval, success rate, or times reviewed
-                    </p>
-                  </div>
-                  <div className="flex">
-                    <select
-                      value={filterType}
-                      onChange={(e) => {
-                        setFilterType(e.target.value as any);
-                        setCurrentIndex(0); // Reset to first card when filtering
-                      }}
-                      className={`px-4 py-2 border rounded-lg ${darkMode ? 'bg-gray-800 text-white border-gray-700 focus:ring-blue-600' : 'bg-white text-gray-700 border-gray-300 focus:ring-blue-500'} focus:outline-none focus:ring-2`}
-                    >
-                      <option value="all">All Cards</option>
-                      <option value="favorites">Favorites</option>
-                      {useSRS && <option value="due">Due for Review</option>}
-                      <option value="easy">Easy</option>
-                      <option value="medium">Medium</option>
-                      <option value="hard">Hard</option>
-                    </select>
-                  </div>
-                </div>
-                
-                {/* Filter info */}
-                {(filterType !== 'all' || searchQuery) && (
-                  <div className="mb-4 flex justify-between items-center">
-                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Showing: {filteredCards.length} of {cards.length} cards
-                      {filterType !== 'all' && ` (${filterType})`}
-                      {searchQuery && ` matching "${searchQuery}"`}
-                    </p>
+                  ) : useSRS && filterType === 'due' ? (
+                    <div className={`text-lg font-medium ${darkMode ? 'text-blue-300 bg-blue-900' : 'text-blue-600 bg-blue-50'} px-6 py-2 rounded-full`}>
+                      Due Cards: {dueCards.length}
+                    </div>
+                  ) : null}
+                  
+                  {/* SRS Toggle */}
+                  <div className="flex items-center gap-2">
+                    <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>SRS</span>
                     <button
-                      onClick={() => { setFilterType('all'); setSearchQuery(''); }}
-                      className={`text-sm ${darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'}`}
+                      onClick={() => setUseSRS(prev => !prev)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        useSRS 
+                          ? darkMode ? 'bg-blue-600' : 'bg-blue-500'
+                          : darkMode ? 'bg-gray-700' : 'bg-gray-300'
+                      }`}
                     >
-                      Clear filters
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          useSRS ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
                     </button>
                   </div>
-                )}
+                </div>
+                
+                <button
+                  onClick={() => setShowStats(true)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                    darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
+                  } text-white transition-colors duration-200`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                  </svg>
+                  Study Stats
+                </button>
+              </div>
 
-                {/* SRS info (show due dates) */}
-                {useSRS && filteredCards.length > 0 && filteredCards[currentIndex].dueDate && (
-                  <div className={`mt-2 mb-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    <p>
-                      Due: {filteredCards[currentIndex].dueDate.toLocaleDateString()} 
-                      {filteredCards[currentIndex].interval && ` (Interval: ${filteredCards[currentIndex].interval} days)`}
-                    </p>
+              {/* Search and filter */}
+              {!isReviewingHard && (
+                <div className="w-full max-w-2xl">
+                  <div className="flex flex-col md:flex-row gap-4 mb-4">
+                    <div className="flex-grow">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Search cards by content, difficulty, due date, etc..."
+                          value={searchQuery}
+                          onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setCurrentIndex(0); // Reset to first card when searching
+                          }}
+                          className={`w-full px-4 py-2 border ${darkMode ? 'bg-gray-800 text-white border-gray-700 focus:ring-blue-600' : 'bg-white text-gray-900 border-gray-300 focus:ring-blue-500'} rounded-lg focus:outline-none focus:ring-2`}
+                        />
+                        {searchQuery.trim() && (
+                          <button
+                            onClick={() => {
+                              setSearchQuery('');
+                              setCurrentIndex(0);
+                            }}
+                            className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-opacity-20 ${
+                              darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-200'
+                            }`}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                      <p className={`mt-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Search by: card content, difficulty (easy/medium/hard), due date, interval, success rate, or times reviewed
+                      </p>
+                    </div>
+                    <div className="flex">
+                      <select
+                        value={filterType}
+                        onChange={(e) => {
+                          setFilterType(e.target.value as any);
+                          setCurrentIndex(0); // Reset to first card when filtering
+                        }}
+                        className={`px-4 py-2 border rounded-lg ${darkMode ? 'bg-gray-800 text-white border-gray-700 focus:ring-blue-600' : 'bg-white text-gray-700 border-gray-300 focus:ring-blue-500'} focus:outline-none focus:ring-2`}
+                      >
+                        <option value="all">All Cards</option>
+                        <option value="favorites">Favorites</option>
+                        {useSRS && <option value="due">Due for Review</option>}
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">Hard</option>
+                      </select>
+                    </div>
                   </div>
-                )}
-              </div>
-            )}
+                  
+                  {/* Filter info */}
+                  {(filterType !== 'all' || searchQuery) && (
+                    <div className="mb-4 flex justify-between items-center">
+                      <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Showing: {filteredCards.length} of {cards.length} cards
+                        {filterType !== 'all' && ` (${filterType})`}
+                        {searchQuery && ` matching "${searchQuery}"`}
+                      </p>
+                      <button
+                        onClick={() => { setFilterType('all'); setSearchQuery(''); }}
+                        className={`text-sm ${darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'}`}
+                      >
+                        Clear filters
+                      </button>
+                    </div>
+                  )}
 
-            {/* Progress bar */}
-            <div className="w-full max-w-2xl">
-              <div className="flex justify-between mb-2">
-                <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Progress: {isReviewingHard ? `${reviewedCardIds.size} / ${hardCards.length}` : `${progress.reviewed} / ${progress.total}`} cards reviewed
-                </span>
-                <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {Math.round((isReviewingHard ? reviewedCardIds.size / hardCards.length : progress.reviewed / progress.total) * 100)}%
-                </span>
-              </div>
-              <div className={`h-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded-full overflow-hidden`}>
-                <div className="flex h-full">
-                  <div 
-                    className="bg-green-500 h-full transition-all duration-300"
-                    style={{ width: `${(isReviewingHard ? reviewResults.easy / hardCards.length : progress.easy / progress.total) * 100}%` }}
-                  />
-                  <div 
-                    className="bg-yellow-500 h-full transition-all duration-300"
-                    style={{ width: `${(isReviewingHard ? reviewResults.medium / hardCards.length : progress.medium / progress.total) * 100}%` }}
-                  />
-                  <div 
-                    className="bg-red-500 h-full transition-all duration-300"
-                    style={{ width: `${(isReviewingHard ? reviewResults.hard / hardCards.length : progress.hard / progress.total) * 100}%` }}
-                  />
+                  {/* SRS info (show due dates) */}
+                  {useSRS && filteredCards.length > 0 && filteredCards[currentIndex].dueDate && (
+                    <div className={`mt-2 mb-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <p>
+                        Due: {filteredCards[currentIndex].dueDate.toLocaleDateString()} 
+                        {filteredCards[currentIndex].interval && ` (Interval: ${filteredCards[currentIndex].interval} days)`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Progress bar */}
+              <div className="w-full max-w-2xl">
+                <div className="flex justify-between mb-2">
+                  <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Progress: {isReviewingHard ? `${reviewedCardIds.size} / ${hardCards.length}` : `${progress.reviewed} / ${progress.total}`} cards reviewed
+                  </span>
+                  <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    {Math.round((isReviewingHard ? reviewedCardIds.size / hardCards.length : progress.reviewed / progress.total) * 100)}%
+                  </span>
+                </div>
+                <div className={`h-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded-full overflow-hidden`}>
+                  <div className="flex h-full">
+                    <div 
+                      className="bg-green-500 h-full transition-all duration-300"
+                      style={{ width: `${(isReviewingHard ? reviewResults.easy / hardCards.length : progress.easy / progress.total) * 100}%` }}
+                    />
+                    <div 
+                      className="bg-yellow-500 h-full transition-all duration-300"
+                      style={{ width: `${(isReviewingHard ? reviewResults.medium / hardCards.length : progress.medium / progress.total) * 100}%` }}
+                    />
+                    <div 
+                      className="bg-red-500 h-full transition-all duration-300"
+                      style={{ width: `${(isReviewingHard ? reviewResults.hard / hardCards.length : progress.hard / progress.total) * 100}%` }}
+                    />
+                  </div>
+                </div>
+                <div className={`flex justify-between mt-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <span>Easy: {isReviewingHard ? reviewResults.easy : progress.easy}</span>
+                  <span>Medium: {isReviewingHard ? reviewResults.medium : progress.medium}</span>
+                  <span>Hard: {isReviewingHard ? reviewResults.hard : progress.hard}</span>
+                  <span>Favorites: {progress.favorites}</span>
                 </div>
               </div>
-              <div className={`flex justify-between mt-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                <span>Easy: {isReviewingHard ? reviewResults.easy : progress.easy}</span>
-                <span>Medium: {isReviewingHard ? reviewResults.medium : progress.medium}</span>
-                <span>Hard: {isReviewingHard ? reviewResults.hard : progress.hard}</span>
-                <span>Favorites: {progress.favorites}</span>
+
+              <div className={`text-2xl font-bold ${darkMode ? 'text-white bg-gray-800' : 'text-gray-700 bg-white'} px-6 py-2 rounded-full shadow-sm`}>
+                Card {currentIndex + 1} of {filteredCards.length}
               </div>
-            </div>
+              
+              <div className="perspective-1000">
+                <Flashcard
+                  front={filteredCards[currentIndex].front}
+                  back={filteredCards[currentIndex].back}
+                  onDifficultySelect={handleDifficultySelect}
+                  isFlipped={isFlipped}
+                  onFlip={() => setIsFlipped(prev => !prev)}
+                  isFavorite={filteredCards[currentIndex].favorite}
+                  onToggleFavorite={handleToggleFavorite}
+                  darkMode={darkMode}
+                />
+              </div>
 
-            <div className={`text-2xl font-bold ${darkMode ? 'text-white bg-gray-800' : 'text-gray-700 bg-white'} px-6 py-2 rounded-full shadow-sm`}>
-              Card {currentIndex + 1} of {filteredCards.length}
-            </div>
-            
-            <div className="perspective-1000">
-              <Flashcard
-                front={filteredCards[currentIndex].front}
-                back={filteredCards[currentIndex].back}
-                onDifficultySelect={handleDifficultySelect}
-                isFlipped={isFlipped}
-                onFlip={() => setIsFlipped(prev => !prev)}
-                isFavorite={filteredCards[currentIndex].favorite}
-                onToggleFavorite={handleToggleFavorite}
-                darkMode={darkMode}
-              />
-            </div>
+              <div className="flex gap-4">
+                <button
+                  onClick={handlePrevious}
+                  className={`px-6 py-3 ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={handleNext}
+                  className={`px-6 py-3 ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
+                >
+                  Next
+                </button>
+              </div>
 
-            <div className="flex gap-4">
+              {/* Keyboard shortcuts help */}
+              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-4`}>
+                Keyboard shortcuts: 
+                <span className={`mx-2 px-2 py-1 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded`}>Space</span> to flip card,
+                <span className={`mx-2 px-2 py-1 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded`}>←</span> previous card,
+                <span className={`mx-2 px-2 py-1 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded`}>→</span> next card
+              </div>
+
+              {/* Restart button */}
               <button
-                onClick={handlePrevious}
-                className={`px-6 py-3 ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
+                onClick={handleRestart}
+                className={`px-6 py-3 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
               >
-                Previous
-              </button>
-              <button
-                onClick={handleNext}
-                className={`px-6 py-3 ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
-              >
-                Next
+                Restart Session
               </button>
             </div>
-
-            {/* Keyboard shortcuts help */}
-            <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-4`}>
-              Keyboard shortcuts: 
-              <span className={`mx-2 px-2 py-1 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded`}>Space</span> to flip card,
-              <span className={`mx-2 px-2 py-1 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded`}>←</span> previous card,
-              <span className={`mx-2 px-2 py-1 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded`}>→</span> next card
-            </div>
-
-            {/* Restart button */}
-            <button
-              onClick={handleRestart}
-              className={`px-6 py-3 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
-            >
-              Restart Session
-            </button>
-
-            {/* Stats modal */}
-            {showStats && <StudyStats darkMode={darkMode} onClose={() => setShowStats(false)} />}
-
-            {showCompletionModal && (
-              <CompletionModal
-                darkMode={darkMode}
-                onClose={() => setShowCompletionModal(false)}
-                totalCards={cards.length}
-              />
-            )}
           </div>
-        </>
+        )}
+      </div>
+      
+      {/* Modals */}
+      {showCompletionModal && (
+        <CompletionModal
+          totalCards={cards.length}
+          onClose={() => setShowCompletionModal(false)}
+          darkMode={darkMode}
+        />
+      )}
+      
+      {showStats && (
+        <StudyStats
+          onClose={toggleShowStats}
+          darkMode={darkMode}
+        />
       )}
     </div>
   );

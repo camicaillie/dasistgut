@@ -5,6 +5,9 @@ import { PasswordPrompt } from './components/PasswordPrompt';
 import { WelcomeGuide } from './components/WelcomeGuide';
 import { GuideTooltip } from './components/GuideTooltip';
 import { flashcardSets, FlashcardSet } from './data/flashcards';
+import { auth } from './utils/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import React from 'react';
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -14,6 +17,74 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showWelcomeGuide, setShowWelcomeGuide] = useState(false);
   const [hasSeenGuide, setHasSeenGuide] = useState(false);
+  const [isAuthInitialized, setIsAuthInitialized] = useState(false);
+
+  // Check for existing Firebase authentication
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log('User is already signed in:', user.uid);
+        console.log('Authentication method:', user.providerId || 'unknown');
+        
+        // Store the user ID in localStorage for persistence/debugging
+        localStorage.setItem('currentUserId', user.uid);
+        setIsAuthenticated(true);
+        
+        // Retrieve last viewed category/subcategory from localStorage
+        const lastCategory = localStorage.getItem('lastCategory');
+        const lastSubcategory = localStorage.getItem('lastSubcategory');
+        
+        if (lastCategory) {
+          const category = flashcardSets.find(set => set.id === lastCategory);
+          if (category) {
+            setSelectedCategory(lastCategory);
+            setCurrentSet(category);
+            
+            if (lastSubcategory) {
+              const subcategoryExists = category.subcategories.some(sub => sub.id === lastSubcategory);
+              if (subcategoryExists) {
+                setSelectedSubcategory(lastSubcategory);
+              }
+            }
+          }
+        }
+      } else {
+        console.log('No user is signed in');
+        
+        // Check if we have a manual auth flag in localStorage as a fallback
+        const manualAuth = localStorage.getItem('manualAuth');
+        if (manualAuth === 'true') {
+          console.log('Using manual authentication');
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+          // Clear selections when not authenticated
+          setSelectedCategory(null);
+          setSelectedSubcategory(null);
+          setCurrentSet(null);
+        }
+      }
+      setIsAuthInitialized(true);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Save last viewed category/subcategory to localStorage when changed
+  useEffect(() => {
+    if (selectedCategory) {
+      localStorage.setItem('lastCategory', selectedCategory);
+      
+      if (selectedSubcategory) {
+        localStorage.setItem('lastSubcategory', selectedSubcategory);
+      } else {
+        localStorage.removeItem('lastSubcategory');
+      }
+    } else {
+      localStorage.removeItem('lastCategory');
+      localStorage.removeItem('lastSubcategory');
+    }
+  }, [selectedCategory, selectedSubcategory]);
 
   // Initialize dark mode and guide state from localStorage
   useEffect(() => {
@@ -61,17 +132,42 @@ function App() {
   };
 
   const handleCategorySelect = (categoryId: string) => {
+    console.log(`handleCategorySelect called with categoryId: ${categoryId}`);
+    
+    // Log all available category IDs for debugging
+    console.log('Available categories:', flashcardSets.map(set => set.id));
+    
     setSelectedCategory(categoryId);
     const selectedSet = flashcardSets.find(set => set.id === categoryId);
+    console.log('Selected set:', selectedSet);
     setCurrentSet(selectedSet || null);
     setSelectedSubcategory(null);
   };
 
   const handleSubcategorySelect = (subcategoryId: string) => {
+    console.log(`handleSubcategorySelect called with subcategoryId: ${subcategoryId}`);
+    
+    // Log subcategories in the current category for debugging
+    if (currentSet) {
+      console.log('Available subcategories:', currentSet.subcategories.map(sub => sub.id));
+      const subcategory = currentSet.subcategories.find(sub => sub.id === subcategoryId);
+      console.log('Selected subcategory:', subcategory);
+    }
+    
     setSelectedSubcategory(subcategoryId);
   };
 
   const handleBackToCategories = () => {
+    // Save state before navigating back
+    if (selectedCategory && selectedSubcategory) {
+      console.log(`Saving state before navigating back. Category: ${selectedCategory}, Subcategory: ${selectedSubcategory}`);
+      // The current state will automatically be saved by the useEffect in FlashcardDeck
+      // before component unmounts
+      
+      // Log that we're going back - this helps with debugging
+      console.log('Navigating back to categories - this should trigger FlashcardDeck unmount save');
+    }
+    
     setSelectedCategory(null);
     setSelectedSubcategory(null);
     setCurrentSet(null);
@@ -209,6 +305,15 @@ function App() {
     </header>
   );
 
+  if (!isAuthInitialized) {
+    // Show loading spinner while checking authentication
+    return (
+      <div className={`min-h-screen flex items-center justify-center transition-colors duration-200 ${darkMode ? 'dark bg-gray-900' : 'bg-gradient-to-b from-gray-50 to-gray-100'}`}>
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <div className={`min-h-screen transition-colors duration-200 ${darkMode ? 'dark bg-gray-900' : 'bg-gradient-to-b from-gray-50 to-gray-100'}`}>
@@ -226,21 +331,36 @@ function App() {
       <main className="max-w-7xl mx-auto py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
         {selectedCategory && currentSet ? (
           selectedSubcategory ? (
-            <FlashcardDeck 
-              cards={currentSet.subcategories.find(sub => sub.id === selectedSubcategory)?.cards || []} 
-              darkMode={darkMode}
-              categoryId={selectedCategory}
-              subcategoryId={selectedSubcategory}
-            />
+            (() => {
+              console.log(`Rendering FlashcardDeck with categoryId=${selectedCategory}, subcategoryId=${selectedSubcategory}`);
+              return (
+                <FlashcardDeck 
+                  cards={currentSet.subcategories.find(sub => sub.id === selectedSubcategory)?.cards || []} 
+                  darkMode={darkMode}
+                  categoryId={selectedCategory}
+                  subcategoryId={selectedSubcategory}
+                />
+              );
+            })()
           ) : (
-            <WelcomePage 
-              onCategorySelect={handleSubcategorySelect} 
-              darkMode={darkMode}
-              selectedCategory={currentSet}
-            />
+            (() => {
+              console.log(`Rendering WelcomePage for subcategory selection within category=${selectedCategory}`);
+              return (
+                <WelcomePage 
+                  onCategorySelect={handleSubcategorySelect} 
+                  darkMode={darkMode}
+                  selectedCategory={currentSet}
+                />
+              );
+            })()
           )
         ) : (
-          <WelcomePage onCategorySelect={handleCategorySelect} darkMode={darkMode} />
+          (() => {
+            console.log('Rendering WelcomePage for main category selection');
+            return (
+              <WelcomePage onCategorySelect={handleCategorySelect} darkMode={darkMode} />
+            );
+          })()
         )}
       </main>
       {showWelcomeGuide && (

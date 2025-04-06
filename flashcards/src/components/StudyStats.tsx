@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { auth, db } from '../utils/firebase';
 
 interface StudySession {
   date: string;
@@ -28,33 +30,57 @@ export const StudyStats = ({ darkMode = false, onClose }: StudyStatsProps) => {
     sessionsCompleted: 0,
   });
 
-  // Load study data from localStorage
+  // Load study data from Firestore
   useEffect(() => {
-    const savedSessions = localStorage.getItem('flashcards-study-sessions');
-    if (savedSessions) {
-      const sessions = JSON.parse(savedSessions) as StudySession[];
-      setStudySessions(sessions);
-      
-      // Calculate total statistics
-      const stats = {
-        cardsReviewed: 0,
-        easy: 0,
-        medium: 0,
-        hard: 0,
-        categories: new Set<string>(),
-        sessionsCompleted: sessions.length,
-      };
-      
-      sessions.forEach(session => {
-        stats.cardsReviewed += session.cardsReviewed;
-        stats.easy += session.performance.easy;
-        stats.medium += session.performance.medium;
-        stats.hard += session.performance.hard;
-        stats.categories.add(session.category);
-      });
-      
-      setTotalStats(stats);
-    }
+    const loadStudySessions = async () => {
+      if (!auth.currentUser) {
+        console.log('User not logged in, cannot load study sessions');
+        return;
+      }
+
+      try {
+        const sessionsRef = collection(db, 'studySessions');
+        const q = query(
+          sessionsRef,
+          where('userId', '==', auth.currentUser.uid),
+          orderBy('date', 'desc'),
+          limit(100) // Limit to last 100 sessions
+        );
+        
+        const querySnapshot = await getDocs(q);
+        const sessions: StudySession[] = [];
+        
+        querySnapshot.forEach((doc) => {
+          sessions.push(doc.data() as StudySession);
+        });
+        
+        setStudySessions(sessions);
+        
+        // Calculate total statistics
+        const stats = {
+          cardsReviewed: 0,
+          easy: 0,
+          medium: 0,
+          hard: 0,
+          categories: new Set<string>(),
+          sessionsCompleted: sessions.length,
+        };
+        
+        sessions.forEach(session => {
+          stats.cardsReviewed += session.cardsReviewed;
+          stats.easy += session.performance.easy;
+          stats.medium += session.performance.medium;
+          stats.hard += session.performance.hard;
+          stats.categories.add(session.category);
+        });
+        
+        setTotalStats(stats);
+      } catch (error) {
+        console.error('Error loading study sessions:', error);
+      }
+    };
+
+    loadStudySessions();
   }, []);
 
   // Function to get the date in a readable format

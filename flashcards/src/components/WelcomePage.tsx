@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { signInWithPopup, onAuthStateChanged } from 'firebase/auth';
 import { auth, googleProvider } from '../utils/firebase'; // Adjust the path if needed
-import { FlashcardSet } from '../data/flashcards';
+import { FlashcardSet, flashcardSets } from '../data/flashcards';
 
 interface WelcomePageProps {
   onCategorySelect: (category: string) => void;
@@ -38,11 +38,17 @@ export const WelcomePage = ({ onCategorySelect, darkMode = false, selectedCatego
     }
   };
 
-  const categories = [
-    { id: 'general', name: 'Člověk a společnost', color: darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600' },
-    { id: 'pravo-politologie', name: 'Právo a politologie', color: darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600' },
-    { id: 'historie-ekonomie', name: 'Moderní historie a ekonomie', color: darkMode ? 'bg-purple-600 hover:bg-purple-700' : 'bg-purple-500 hover:bg-purple-600' },
-  ];
+  // Use the actual category data from flashcardSets to create UI categories
+  const categories = flashcardSets.map(set => ({
+    id: set.id,
+    name: set.name,
+    color: 
+      set.id === 'general' 
+        ? darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
+        : set.id === 'pravo-politologie'
+          ? darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'
+          : darkMode ? 'bg-purple-600 hover:bg-purple-700' : 'bg-purple-500 hover:bg-purple-600'
+  }));
 
   // If the user is not logged in, show the login button
   if (!user) {
